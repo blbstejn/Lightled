@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class GridManager : MonoBehaviour
@@ -16,6 +17,7 @@ public class GridManager : MonoBehaviour
         Instance = this;
     }
     
+    // use a string matrix to setup the grid the exact way i want it to be (ascii)
     public void GenerateGrid()
     {
         _tiles = new Dictionary<Vector2, Tile>();
@@ -39,6 +41,16 @@ public class GridManager : MonoBehaviour
         GameManager.Instance.ChangeState(GameState.SpawnHeroes);
     }
 
+    public Tile GetHeroSpawnTile()
+    {
+        return _tiles.Where(t => t.Key.x < _width / 2 && t.Value.Walkable).OrderBy(t => Random.value).First().Value;
+    }
+
+    public Tile GetEnemySpawnTile()
+    {
+        return _tiles.Where(t => t.Key.x > _width / 2 && t.Value.Walkable).OrderBy(t => Random.value).First().Value;
+    }
+    
     public Tile GetTileAtPosition(Vector2 pos)
     {
         if (_tiles.TryGetValue(pos, out var tile))

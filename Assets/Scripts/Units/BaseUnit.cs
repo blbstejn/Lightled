@@ -2,15 +2,12 @@ using UnityEngine;
 
 public class BaseUnit : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public string UnitName;
+    public Tile OccupiedTile;
+    public Faction Faction;
 
-    // Update is called once per frame
-    void Update()
+    public void DisplayUnitInfo()
     {
-        
+        // show unit info in canva
     }
 }
