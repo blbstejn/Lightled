@@ -2,6 +2,9 @@ using UnityEngine;
 
 public abstract class Tile : MonoBehaviour
 {
+	public int X { get; private set; }
+	public int Y { get; private set; }
+	
     [SerializeField] protected SpriteRenderer _renderer;
 	[SerializeField] private GameObject _highlight;
 	[SerializeField] private bool _isWalkable;
@@ -10,7 +13,10 @@ public abstract class Tile : MonoBehaviour
 	public bool Walkable => _isWalkable && OccupiedUnit == null;
 
 	public virtual void Init(int x, int y)
-	{}
+	{
+		X = x;
+		Y = y;
+	}
 
 	void OnMouseEnter()
 	{
