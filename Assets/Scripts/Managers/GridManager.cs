@@ -10,6 +10,12 @@ public class GridManager : MonoBehaviour
     [SerializeField] private Tile _walkableTile, _voidTile;
     [SerializeField] private Transform _cam;
 
+    [SerializeField] private Color reachableTileColor = Color.darkOliveGreen;
+    private readonly HashSet<Tile> _highlightedTiles = new HashSet<Tile>();
+    
+    [SerializeField] private Color _lineOfSightColor = Color.cadetBlue;
+    private readonly HashSet<Tile> _losTiles = new HashSet<Tile>();
+    
     private Dictionary<Vector2, Tile> _tiles;
 
     void Awake()
@@ -40,83 +46,45 @@ public class GridManager : MonoBehaviour
 
         GameManager.Instance.ChangeState(GameState.SpawnHeroes);
     }
-
-    public List<Tile> FindPath(Tile start, Tile goal)
-    {
-        var frontier = new PriorityQueue<Tile>();
-        frontier.Enqueue(start, 0);
-        
-        Dictionary<Tile, Tile> cameFrom = new Dictionary<Tile, Tile>();
-        Dictionary<Tile, float> costSoFar = new Dictionary<Tile, float>();
-        
-        cameFrom[start] = null;
-        costSoFar[start] = 0;
-
-        while (frontier.Count > 0)
-        {
-            Tile current = frontier.Dequeue();
-
-            if (current == goal)
-                break;
-
-            foreach (Tile neighbour in GetNeighbours(current))
-            {
-                if (!neighbour.Walkable && neighbour != goal)
-                    continue;
-                
-                float newCost = costSoFar[current] + 1f;
-
-                if (!costSoFar.ContainsKey(neighbour) || newCost < costSoFar[neighbour])
-                {
-                    costSoFar[neighbour] = newCost;
-                    float priority = newCost + Mathf.Abs(neighbour.X - goal.X) + Mathf.Abs(neighbour.Y - goal.Y);
-                    frontier.Enqueue(neighbour, priority);
-                    cameFrom[neighbour] = current;
-                }
-            }
-        }
-
-        return ReconstructPath(cameFrom, start, goal);
-    }
-
-    private List<Tile> ReconstructPath(Dictionary<Tile, Tile> cameFrom, Tile start, Tile goal)
-    {
-        List<Tile> path = new List<Tile>();
-
-        if (!cameFrom.ContainsKey(goal))
-            return path;
-
-        Tile current = goal;
-
-        while (current != start)
-        {
-            path.Add(current);
-            current = cameFrom[current];
-        }
-        
-        path.Add(start);
-        path.Reverse();
-        
-        return path;
-    }
-
+    
     public IEnumerable<Tile> GetNeighbours(Tile tile)
     {
-        Vector2[] dirs =
+        for (int dx = -1; dx <= 1; dx++)
         {
-            new Vector2(1, 0),
-            new Vector2(-1, 0),
-            new Vector2(0, 1),
-            new Vector2(0, -1),
-        };
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
 
-        foreach (var dir in dirs)
-        {
-            Vector2 checkPos = new Vector2(tile.X + (int)dir.x, tile.Y + (int)dir.y);
-
-            if (_tiles.TryGetValue(checkPos, out Tile neighbour))
-                yield return neighbour;
+                Vector2 pos = new Vector2(tile.X + dx, tile.Y + dy);
+                if (_tiles.TryGetValue(pos, out Tile neighbour))
+                    yield return neighbour;
+            }
         }
+    }
+
+    public void ShowImmediateMoveOptions(BaseUnit unit)
+    {
+        ClearMoveHighlights();
+        
+        Tile origin = unit.OccupiedTile;
+
+        foreach (Tile neighbour in GetNeighbours(origin))
+        {
+            if (unit.CanMoveTo(neighbour))
+            {
+                neighbour.GetComponent<SpriteRenderer>().color = reachableTileColor;
+                _highlightedTiles.Add(neighbour);
+            }
+        }
+    }
+
+    public void ClearMoveHighlights()
+    {
+        foreach (Tile tile in _highlightedTiles)
+            tile.GetComponent<SpriteRenderer>().color = Color.white;
+        
+        _highlightedTiles.Clear();
     }
 
     public Tile GetHeroSpawnTile()
@@ -137,5 +105,24 @@ public class GridManager : MonoBehaviour
         }
         
         return null;
+    }
+
+    public void ShowLineOfSight(BaseHero hero)
+    {
+        ClearLineOfSight();
+
+        foreach (Tile tile in hero.GetLineOfSightTiles())
+        {
+            tile.GetComponent<SpriteRenderer>().color = _lineOfSightColor;
+            _losTiles.Add(tile);
+        }
+    }
+
+    public void ClearLineOfSight()
+    {
+        foreach (Tile tile in _losTiles)
+            tile.GetComponent<SpriteRenderer>().color = Color.white;
+        
+        _losTiles.Clear();
     }
 }

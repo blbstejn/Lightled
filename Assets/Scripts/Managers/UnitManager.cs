@@ -59,6 +59,13 @@ public class UnitManager : MonoBehaviour
     public void SetSelectedHero(BaseHero hero)
     {
         SelectedHero = hero;
-        MenuManager.Instance.ShowSelectedHero(hero);
+
+        GridManager.Instance.ClearMoveHighlights();
+
+        if (hero != null)
+        {
+            GridManager.Instance.ShowImmediateMoveOptions(hero);
+            MenuManager.Instance.ShowSelectedHero(hero);
+        }
     }
 }

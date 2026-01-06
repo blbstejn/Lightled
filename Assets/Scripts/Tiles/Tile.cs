@@ -18,46 +18,81 @@ public abstract class Tile : MonoBehaviour
 		Y = y;
 	}
 
+	public void Highlight(bool active)
+	{
+		_highlight.SetActive(active);
+	}
+
 	void OnMouseEnter()
 	{
-		_highlight.SetActive(true);
+		Highlight(true);
 		MenuManager.Instance.ShowTileInfo(this);
+
+		BaseHero selectedHero = UnitManager.Instance.SelectedHero;
+
+		if (OccupiedUnit is BaseHero hoveredHero)
+		{
+			GridManager.Instance.ClearMoveHighlights();
+			GridManager.Instance.ClearLineOfSight();
+			
+			GridManager.Instance.ShowImmediateMoveOptions(hoveredHero);
+			GridManager.Instance.ShowLineOfSight(hoveredHero);
+			return;
+		}
+		
+		if (selectedHero != null)
+		{
+			GridManager.Instance.ShowLineOfSight(selectedHero);
+		}
 	}
 
 	void OnMouseExit()
 	{
-		_highlight.SetActive(false);
+		Highlight(false);
 		MenuManager.Instance.ShowTileInfo(null);
+
+		BaseHero selectedHero = UnitManager.Instance.SelectedHero;
+		
+		GridManager.Instance.ClearMoveHighlights();
+		GridManager.Instance.ClearLineOfSight();
+
+		if (selectedHero != null)
+		{
+			GridManager.Instance.ShowImmediateMoveOptions(selectedHero);
+			GridManager.Instance.ShowLineOfSight(selectedHero);
+		}
 	}
 
 	private void OnMouseDown()
 	{
 		if (GameManager.Instance.GameState != GameState.HeroesTurn)
 			return;
-		
-		if(OccupiedUnit != null)
-		{
-			if (OccupiedUnit.Faction == Faction.Hero)
-				UnitManager.Instance.SetSelectedHero((BaseHero)this.OccupiedUnit);
-			else
-			{
-				if (UnitManager.Instance.SelectedHero != null)
-				{
-					var enemy = (BaseEnemy)OccupiedUnit;
-					//however to handle enemy selection
-				}
 
-			}
-		}
-		else
+		BaseHero hero = UnitManager.Instance.SelectedHero;
+
+		// Selecting a hero
+		if (OccupiedUnit is BaseHero clickedHero)
 		{
-			if (UnitManager.Instance.SelectedHero != null)
+			UnitManager.Instance.SetSelectedHero(clickedHero);
+			return;
+		}
+
+		if (hero == null)
+			return;
+
+		// Try contextual abilities
+		foreach (UnitAbility ability in hero.Abilities)
+		{
+			if (!ability.IsContextual)
+				continue;
+
+			if (ability.CanExecute(hero, this))
 			{
-				SetUnit(UnitManager.Instance.SelectedHero);
-				UnitManager.Instance.SetSelectedHero(null);
+				ability.Execute(hero, this);
+				UnitManager.Instance.SetSelectedHero(hero);
+				return;
 			}
 		}
-			
 	}
 	
 	public void SetUnit(BaseUnit unit)
