@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8847392847233551921}
   - component: {fileID: 8847392847233551922}
   - component: {fileID: 8847392847233551923}
+  - component: {fileID: -8866755193531709178}
   m_Layer: 0
   m_Name: Blip_Prefab
   m_TagString: Untagged
@@ -28,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2.5, y: 2.5, z: 1}
+  m_LocalScale: {x: 2.0930233, y: 2.0930233, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -101,12 +102,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b2a001b7db97400099570680b619d8b5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy2
   UnitName: Blip
   OccupiedTile: {fileID: 0}
   Faction: 1
   maxHP: 10
+  unitAbilities: []
   movementProfile:
     allowSideways: 1
     forwardCost: 1
@@ -116,3 +118,18 @@ MonoBehaviour:
   ghoulPrefab: {fileID: 0}
   minGhouls: 1
   maxGhouls: 3
+--- !u!114 &-8866755193531709178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8847392847233551920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb593cab84eaa4042a102cb9f9a9a47d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitScaler
+  targetSize: 1
+  padding: 0.05
+  scaleOnAwake: 1

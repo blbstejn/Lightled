@@ -5,7 +5,7 @@ using TMPro;
 
 /// <summary>
 /// Manages the main menu UI navigation and level loading.
-/// Handles transitions between menu panels (Main, Level Select, Options, Lore).
+/// Handles transitions between menu panels (Main, Level Select, Options, Info).
 /// </summary>
 public class MainMenuManager : MonoBehaviour
 {
@@ -13,7 +13,7 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject levelSelectPanel;
     [SerializeField] private GameObject optionsPanel;
-    [SerializeField] private GameObject lorePanel;
+    [SerializeField] private GameObject infoPanel;
 
     [Header("Level Selection")]
     [SerializeField] private LevelData[] availableLevels;
@@ -26,8 +26,21 @@ public class MainMenuManager : MonoBehaviour
 
     void Start()
     {
+        // Ensure all panels start in correct state
+        HideAllPanels();
         ShowMainMenu();
         GenerateLevelButtons();
+    }
+
+    /// <summary>
+    /// Hides all menu panels.
+    /// </summary>
+    private void HideAllPanels()
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        if (levelSelectPanel != null) levelSelectPanel.SetActive(false);
+        if (optionsPanel != null) optionsPanel.SetActive(false);
+        if (infoPanel != null) infoPanel.SetActive(false);
     }
 
     #region Panel Navigation
@@ -57,11 +70,11 @@ public class MainMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows the lore panel.
+    /// Shows the info panel (game rules, design, lore).
     /// </summary>
-    public void ShowLore()
+    public void ShowInfo()
     {
-        SetActivePanel(lorePanel);
+        SetActivePanel(infoPanel);
     }
 
     private void SetActivePanel(GameObject panelToShow)
@@ -69,7 +82,7 @@ public class MainMenuManager : MonoBehaviour
         if (mainMenuPanel != null) mainMenuPanel.SetActive(panelToShow == mainMenuPanel);
         if (levelSelectPanel != null) levelSelectPanel.SetActive(panelToShow == levelSelectPanel);
         if (optionsPanel != null) optionsPanel.SetActive(panelToShow == optionsPanel);
-        if (lorePanel != null) lorePanel.SetActive(panelToShow == lorePanel);
+        if (infoPanel != null) infoPanel.SetActive(panelToShow == infoPanel);
     }
 
     #endregion
@@ -110,12 +123,15 @@ public class MainMenuManager : MonoBehaviour
             GameObject buttonObj = new GameObject($"LevelButton_{i}_{level.levelName}", typeof(RectTransform));
             buttonObj.transform.SetParent(levelButtonContainer, false);
 
-            // Configure RectTransform for proper sizing
+            // Configure RectTransform
             RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
             rectTransform.sizeDelta = new Vector2(300, 50); // Width x Height
-            rectTransform.anchorMin = new Vector2(0, 1);
-            rectTransform.anchorMax = new Vector2(0, 1);
-            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+
+            // Add LayoutElement for proper sizing in Layout Groups
+            LayoutElement layoutElement = buttonObj.AddComponent<LayoutElement>();
+            layoutElement.minHeight = 50;
+            layoutElement.preferredHeight = 50;
+            layoutElement.preferredWidth = 300;
 
             // Add Button component
             Button button = buttonObj.AddComponent<Button>();
@@ -204,11 +220,11 @@ public class MainMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by the Lore button.
+    /// Called by the Info button (game rules, design, lore).
     /// </summary>
-    public void OnLoreButtonClicked()
+    public void OnInfoButtonClicked()
     {
-        ShowLore();
+        ShowInfo();
     }
 
     /// <summary>

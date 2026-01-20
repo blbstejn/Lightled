@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6142815821545943810}
   - component: {fileID: 495322236659438385}
   - component: {fileID: 375022305395541579}
+  - component: {fileID: -3549138115626411968}
   m_Layer: 0
   m_Name: Hero1_Prototype
   m_TagString: Untagged
@@ -28,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.0909, y: 0.345, z: 0}
-  m_LocalScale: {x: 2.319, y: 1.4251, z: 1}
+  m_LocalScale: {x: 1.40625, y: 1.40625, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -106,3 +107,27 @@ MonoBehaviour:
   UnitName: Hero
   OccupiedTile: {fileID: 0}
   Faction: 0
+  maxHP: 10
+  unitAbilities: []
+  movementProfile:
+    allowSideways: 0
+    forwardCost: 1
+    backwardCost: 2
+  moveSpeed: 5
+  facing: 0
+  shootConeWidth: 1
+--- !u!114 &-3549138115626411968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7457479669132667810}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb593cab84eaa4042a102cb9f9a9a47d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitScaler
+  targetSize: 1
+  padding: 0.05
+  scaleOnAwake: 1
