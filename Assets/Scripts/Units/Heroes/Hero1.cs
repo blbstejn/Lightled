@@ -2,15 +2,36 @@ using UnityEngine;
 
 public class Hero1 : BaseHero
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public override void Awake()
     {
-        
+        base.Awake();
+        SetupAbilities();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void SetupAbilities()
     {
-        
+        // Standard loadout: Melee, Move, Ranged Attack, Turn Left, Turn Right
+        var abilities = new System.Collections.Generic.List<UnitAbility>();
+
+        // Contextual abilities
+        var move = ScriptableObject.CreateInstance<MoveAbility>();
+        abilities.Add(move);
+
+        var melee = ScriptableObject.CreateInstance<MeleeAttackAbility>();
+        abilities.Add(melee);
+
+        var ranged = ScriptableObject.CreateInstance<RangedAttackAbility>();
+        abilities.Add(ranged);
+
+        // UI abilities
+        var turnLeft = ScriptableObject.CreateInstance<TurnLeftAbility>();
+        abilities.Add(turnLeft);
+
+        var turnRight = ScriptableObject.CreateInstance<TurnRightAbility>();
+        abilities.Add(turnRight);
+
+        // Set abilities using reflection to access private field
+        var field = typeof(BaseUnit).GetField("_abilities", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        field.SetValue(this, abilities);
     }
 }

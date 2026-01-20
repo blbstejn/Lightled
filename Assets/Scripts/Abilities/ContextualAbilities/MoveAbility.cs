@@ -4,6 +4,7 @@ public class MoveAbility : TargetedAbility
 {
     public override string Name => "Move";
     public override int APCost => 0; // dynamic
+    public override bool isContextual => true;
 
     public override bool CanExecute(BaseUnit unit, Tile target)
     {
@@ -18,11 +19,9 @@ public class MoveAbility : TargetedAbility
 
     public override void Execute(BaseUnit unit, Tile target)
     {
-        int cost  = unit.GetMoveCost(TargetTile);
-        if (cost > unit.CurrentActionPoints)
-            return;
-        
-        unit.SpendActionPoints(cost);
-        TargetTile.SetUnit(unit);
+        unit.MoveOneTile(TargetTile);
+
+        // Mark that unit has moved this turn (enables free shooting)
+        unit.SetHasMoved();
     }
 }

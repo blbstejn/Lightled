@@ -11,7 +11,7 @@ public enum FacingDirection
     Right
 }
 
-[System.Serializable]
+[Serializable]
 public class MovementProfile
 {
     public bool allowSideways;
@@ -32,26 +32,53 @@ public class BaseUnit : MonoBehaviour
     public bool IsAlive => CurrentHP > 0;
     
     [Header("ActionPoints")]
-    public int MaxActionPoints = 4;
+    public int MaxActionPoints { get; protected set; } = 4;
     public int CurrentActionPoints { get; protected set; }
-    
+
     [Header("Abilities")]
-    [SerializeField] private List<UnitAbility> _abilities = new List<UnitAbility>();
+    private List<UnitAbility> _abilities = new List<UnitAbility>();
     public IReadOnlyList<UnitAbility> Abilities => _abilities;
     
     [Header("Movement")]
     [SerializeField] protected MovementProfile movementProfile;
     [SerializeField] protected float moveSpeed = 5f;
     public bool IsMoving { get; private set; }
+    public bool HasMovedThisTurn { get; private set; }
 
     [Header("Facing")]
     [SerializeField] protected FacingDirection facing;
     public FacingDirection Facing => facing;
 
+    [Header("Combat")]
+    public BaseUnit SustainedFireTarget { get; private set; }
+    public bool HasSustainedFire => SustainedFireTarget != null;
+
     public virtual void Awake()
     {
         CurrentHP = maxHP;
         CurrentActionPoints = MaxActionPoints;
+    }
+
+    public void StartNewTurn()
+    {
+        CurrentActionPoints = MaxActionPoints;
+        HasMovedThisTurn = false;
+        SustainedFireTarget = null;
+    }
+
+    public void SetHasMoved()
+    {
+        HasMovedThisTurn = true;
+    }
+
+    public void SetSustainedFireTarget(BaseUnit target)
+    {
+        SustainedFireTarget = target;
+    }
+
+    public void BreakSustainedFire()
+    {
+        SustainedFireTarget = null;
     }
 
     public Tile GetForwardTile()
@@ -67,26 +94,33 @@ public class BaseUnit : MonoBehaviour
     
     #region Movement
 
-    public Vector2Int Forward
+    public void SetFacing(FacingDirection newFacing)
     {
-        get
-        {
-            return facing switch
-            {
-                FacingDirection.Up => Vector2Int.up,
-                FacingDirection.Down => Vector2Int.down,
-                FacingDirection.Left => Vector2Int.left,
-                FacingDirection.Right => Vector2Int.right,
-                _ => Vector2Int.up
-            };
-        }
+        facing = newFacing;
+        UpdateVisualFacing();
     }
+
+    private void UpdateVisualFacing()
+    {
+        float angle = facing switch
+        {
+            FacingDirection.Up    => 0f,
+            FacingDirection.Right => -90f,
+            FacingDirection.Down  => 180f,
+            FacingDirection.Left  => 90f,
+            _ => 0f
+        };
+
+        transform.rotation = Quaternion.Euler(0f, 0f, angle);
+    }
+
+    public Vector2Int Forward => DirectionUtils.ToVector(facing);
     
     public Vector2Int Perpendicular => new Vector2Int(-Forward.y, Forward.x);
     
     public int GetMoveCost(Tile target)
     {
-        if (OccupiedTile == null || !target.Walkable)
+        if (OccupiedTile == null || !target.Walkable || movementProfile == null)
             return int.MaxValue;
 
         int dx = target.X - OccupiedTile.X;
@@ -99,7 +133,7 @@ public class BaseUnit : MonoBehaviour
         Vector2Int moveDir = new Vector2Int(dx, dy);
         Vector2Int forward = DirectionUtils.ToVector(facing);
 
-        int dot = Vector2Int.Dot(forward, moveDir);
+        int dot = (int)Vector2.Dot(forward, moveDir);
 
         // Sideways
         if (dot == 0)
@@ -134,21 +168,39 @@ public class BaseUnit : MonoBehaviour
     
     protected virtual IEnumerator MoveCoroutine(Tile target)
     {
+        IsMoving = true;
+
         Vector3 startPos = transform.position;
-        Vector3 targetgPos = target.transform.position;
+        Vector3 targetPos = target.transform.position;
 
         float t = 0f;
 
         while (t < 1f)
         {
             t += Time.deltaTime * moveSpeed;
-            transform.position = Vector3.Lerp(startPos, targetgPos, t);
+            transform.position = Vector3.Lerp(startPos, targetPos, t);
             yield return null;
         }
-        
+
         target.SetUnit(this);
+        IsMoving = false;
+        OnMoveEnded();
     }
-    
+
+    protected virtual void OnMoveEnded()
+    {
+        // Check if sustained fire target is still in line of sight
+        if (HasSustainedFire && this is BaseHero hero)
+        {
+            var losTiles = hero.GetLineOfSightTiles();
+            if (SustainedFireTarget.OccupiedTile == null || !losTiles.Contains(SustainedFireTarget.OccupiedTile))
+            {
+                Debug.Log($"{UnitName} lost line of sight to {SustainedFireTarget.UnitName} - sustained fire broken!");
+                BreakSustainedFire();
+            }
+        }
+    }
+
     #endregion
     
     #region AbilitiesAndAP
@@ -171,16 +223,9 @@ public class BaseUnit : MonoBehaviour
         
         CurrentHP -= amount;
         CurrentHP = Mathf.Max(CurrentHP, 0);
-        
-        OnDamageTaken(amount, source);
 
         if (CurrentHP <= 0)
             Die(source);
-    }
-
-    private void OnDamageTaken(int amount, BaseUnit source)
-    {
-        // hook for UI, sound and anim
     }
 
     #endregion

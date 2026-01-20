@@ -13,6 +13,13 @@ public class GameManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        // Check if a level was selected from the main menu
+        if (LevelLoader.SelectedLevel != null)
+        {
+            GridManager.Instance.SetLevel(LevelLoader.SelectedLevel);
+            LevelLoader.SelectedLevel = null; // Clear after loading
+        }
+
         ChangeState(GameState.GenerateGrid);
     }
 

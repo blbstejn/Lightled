@@ -8,6 +8,12 @@ public class BaseHero : BaseUnit
     [Header("FieldOfView")]
     [SerializeField] private int shootConeWidth = 1;
 
+    public override void Awake()
+    {
+        MaxActionPoints = 4; // Heroes have 4 AP
+        base.Awake();
+    }
+
     public HashSet<Tile> GetLineOfSightTiles()
     {
         HashSet<Tile> result = new();

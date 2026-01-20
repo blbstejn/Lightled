@@ -4,13 +4,25 @@ public abstract class Tile : MonoBehaviour
 {
 	public int X { get; private set; }
 	public int Y { get; private set; }
-	
-    [SerializeField] protected SpriteRenderer _renderer;
+
 	[SerializeField] private GameObject _highlight;
 	[SerializeField] private bool _isWalkable;
 
 	public BaseUnit OccupiedUnit;
-	public bool Walkable => _isWalkable && OccupiedUnit == null;
+	public bool Walkable
+	{
+		get
+		{
+			if (!_isWalkable || OccupiedUnit != null)
+				return false;
+
+			// Check if tile is on fire (blocks movement)
+			if (FireEffectManager.Instance != null && FireEffectManager.Instance.IsFireBlockingMovement(this))
+				return false;
+
+			return true;
+		}
+	}
 
 	public virtual void Init(int x, int y)
 	{
@@ -83,7 +95,7 @@ public abstract class Tile : MonoBehaviour
 		// Try contextual abilities
 		foreach (UnitAbility ability in hero.Abilities)
 		{
-			if (!ability.IsContextual)
+			if (!ability.isContextual)
 				continue;
 
 			if (ability.CanExecute(hero, this))

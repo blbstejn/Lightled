@@ -6,7 +6,7 @@ using UnityEngine;
 public class GridManager : MonoBehaviour
 {
     public static GridManager Instance;
-    [SerializeField] private int _width, _height;
+    [SerializeField] private LevelData _currentLevel;
     [SerializeField] private Tile _walkableTile, _voidTile;
     [SerializeField] private Transform _cam;
 
@@ -22,27 +22,83 @@ public class GridManager : MonoBehaviour
     {
         Instance = this;
     }
-    
-    // use a string matrix to setup the grid the exact way i want it to be (ascii)
+
+    /// <summary>
+    /// Sets the level to be generated. Call this before GenerateGrid() to change levels.
+    /// </summary>
+    public void SetLevel(LevelData levelData)
+    {
+        _currentLevel = levelData;
+    }
+
+    /// <summary>
+    /// Clears the existing grid tiles from the scene.
+    /// </summary>
+    public void ClearGrid()
+    {
+        if (_tiles != null)
+        {
+            foreach (var tile in _tiles.Values)
+            {
+                if (tile != null)
+                    Destroy(tile.gameObject);
+            }
+            _tiles.Clear();
+        }
+
+        ClearMoveHighlights();
+        ClearLineOfSight();
+    }
+
+    /// <summary>
+    /// Generates the grid based on the currently set LevelData.
+    /// Uses ASCII-style string encoding from LevelData.gridRows.
+    /// </summary>
     public void GenerateGrid()
     {
-        _tiles = new Dictionary<Vector2, Tile>();
-        
-        for ( int x = 0; x < _width; x++)
+        if (_currentLevel == null)
         {
-            for (int y = 0; y < _height; y++)
+            Debug.LogError("GridManager: Cannot generate grid - no LevelData assigned!");
+            return;
+        }
+
+        if (!_currentLevel.Validate())
+        {
+            Debug.LogError($"GridManager: LevelData '{_currentLevel.name}' validation failed!");
+            return;
+        }
+
+        _tiles = new Dictionary<Vector2, Tile>();
+
+        int width = _currentLevel.Width;
+        int height = _currentLevel.Height;
+
+        // Generate grid from string layout
+        // Note: Y=0 in array is TOP row, but in world space Y=0 is bottom
+        // We flip Y coordinate during instantiation
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
             {
-                var randomTile = Random.Range(0, 6) >= 3 ? _walkableTile : _voidTile;
-                var spawnedTile = Instantiate(randomTile, new Vector3(x, y), Quaternion.identity);
-                spawnedTile.name = $"Tile {x} {y}";
-                
-                spawnedTile.Init(x, y);
-                
-                _tiles[new Vector2(x, y)] = spawnedTile;
+                bool isWalkable = _currentLevel.IsWalkable(x, y);
+                Tile tileToSpawn = isWalkable ? _walkableTile : _voidTile;
+
+                // Flip Y: bottom row of world = last string in array
+                int worldY = height - 1 - y;
+                var spawnedTile = Instantiate(tileToSpawn, new Vector3(x, worldY), Quaternion.identity);
+                spawnedTile.name = $"Tile {x} {worldY}";
+                spawnedTile.Init(x, worldY);
+
+                _tiles[new Vector2(x, worldY)] = spawnedTile;
             }
         }
 
-        _cam.transform.position = new Vector3((float)_width / 2 - 0.5f, (float)_height / 2 - 0.5f, -10);
+        // Center camera on grid
+        _cam.transform.position = new Vector3(
+            (float)width / 2 - 0.5f,
+            (float)height / 2 - 0.5f,
+            -10
+        );
 
         GameManager.Instance.ChangeState(GameState.SpawnHeroes);
     }
@@ -89,12 +145,38 @@ public class GridManager : MonoBehaviour
 
     public Tile GetHeroSpawnTile()
     {
-        return _tiles.Where(t => t.Key.x < _width / 2 && t.Value.Walkable).OrderBy(t => Random.value).First().Value;
+        if (_currentLevel.heroSpawnPoints != null && _currentLevel.heroSpawnPoints.Length > 0)
+        {
+            // Use defined spawn points
+            Vector2Int spawnPoint = _currentLevel.heroSpawnPoints[Random.Range(0, _currentLevel.heroSpawnPoints.Length)];
+
+            // Flip Y coordinate to match world space
+            int worldY = _currentLevel.Height - 1 - spawnPoint.y;
+            return GetTileAtPosition(new Vector2(spawnPoint.x, worldY));
+        }
+
+        // Fallback: random walkable tile on left half
+        return _tiles.Where(t => t.Key.x < _currentLevel.Width / 2 && t.Value.Walkable)
+                     .OrderBy(t => Random.value)
+                     .First().Value;
     }
 
     public Tile GetEnemySpawnTile()
     {
-        return _tiles.Where(t => t.Key.x > _width / 2 && t.Value.Walkable).OrderBy(t => Random.value).First().Value;
+        if (_currentLevel.enemySpawnPoints != null && _currentLevel.enemySpawnPoints.Length > 0)
+        {
+            // Use defined spawn points
+            Vector2Int spawnPoint = _currentLevel.enemySpawnPoints[Random.Range(0, _currentLevel.enemySpawnPoints.Length)];
+
+            // Flip Y coordinate to match world space
+            int worldY = _currentLevel.Height - 1 - spawnPoint.y;
+            return GetTileAtPosition(new Vector2(spawnPoint.x, worldY));
+        }
+
+        // Fallback: random walkable tile on right half
+        return _tiles.Where(t => t.Key.x > _currentLevel.Width / 2 && t.Value.Walkable)
+                     .OrderBy(t => Random.value)
+                     .First().Value;
     }
     
     public Tile GetTileAtPosition(Vector2 pos)

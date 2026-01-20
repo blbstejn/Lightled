@@ -1,5 +1,4 @@
-﻿using UnityEditor.Experimental.GraphView;
-using UnityEngine;
+﻿using UnityEngine;
 
 public static class DirectionUtils
 {
@@ -23,8 +22,8 @@ public static class DirectionUtils
             return FacingDirection.Down;
         if (vector == Vector2Int.left)
             return FacingDirection.Left;
-        if (vector == Vector2Int.left)
-            return FacingDirection.Left;
+        if (vector == Vector2Int.right)
+            return FacingDirection.Right;
         
         return FacingDirection.Up;
     }
