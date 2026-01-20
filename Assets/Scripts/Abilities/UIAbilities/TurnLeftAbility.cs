@@ -1,26 +1,25 @@
 ﻿using UnityEngine;
 
 [CreateAssetMenu(menuName = "Abilities/Turn Left")]
-public class TurnLeftAbility : UnitAbility
+public class TurnLeftAbility : UntargetedAbility
 {
-    public override string Name => "Turn Left";
-    public override int APCost => 1;
-    public override bool isContextual => false;
+    public override string abilityName => "Turn Left";
+    public override int actionPointCost => 1;
 
-    public override bool CanExecute(BaseUnit unit, Tile target)
+    public override bool CanExecute(BaseUnit unit)
     {
         if (unit == null)
             return false;
 
-        return unit.CanPay(APCost);
+        return unit.CanPay(actionPointCost);
     }
 
-    public override void Execute(BaseUnit unit, Tile target)
+    public override void Execute(BaseUnit unit)
     {
-        if (!CanExecute(unit, target))
+        if (!CanExecute(unit))
             return;
 
-        unit.SpendActionPoints(APCost);
+        unit.SpendActionPoints(actionPointCost);
         unit.SetFacing(TurnLeft(unit.Facing));
 
         // Turning breaks sustained fire (changes line of sight)

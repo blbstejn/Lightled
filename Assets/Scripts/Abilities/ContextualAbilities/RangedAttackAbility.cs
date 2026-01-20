@@ -2,9 +2,8 @@ using UnityEngine;
 
 public class RangedAttackAbility : TargetedAbility
 {
-    public override string Name => "Ranged Attack";
-    public override int APCost => 1;
-    public override bool isContextual => true;
+    public override string abilityName => "Ranged Attack";
+    public override int actionPointCost => 1;
 
     public override bool CanExecute(BaseUnit unit, Tile target)
     {
@@ -12,7 +11,7 @@ public class RangedAttackAbility : TargetedAbility
             return false;
 
         // Free shooting after movement
-        if (!unit.HasMovedThisTurn && !unit.CanPay(APCost))
+        if (!unit.HasMovedThisTurn && !unit.CanPay(actionPointCost))
             return false;
 
         if (unit.Faction != Faction.Hero)
@@ -45,7 +44,7 @@ public class RangedAttackAbility : TargetedAbility
         // Only spend AP if unit hasn't moved this turn
         if (!unit.HasMovedThisTurn)
         {
-            unit.SpendActionPoints(APCost);
+            unit.SpendActionPoints(actionPointCost);
         }
 
         // Determine hit threshold

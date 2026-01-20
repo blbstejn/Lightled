@@ -33,10 +33,22 @@ public class MenuManager : MonoBehaviour
         if (hero == null)
         {
             _selectedHeroObject.SetActive(false);
+
+            // Also hide the in-game UI
+            if (InGameUIManager.Instance != null)
+            {
+                InGameUIManager.Instance.HideHeroUI();
+            }
             return;
         }
-        
+
         _selectedHeroObject.GetComponentInChildren<Text>().text = hero.UnitName;
         _selectedHeroObject.SetActive(true);
+
+        // Update the in-game UI with hero stats and abilities
+        if (InGameUIManager.Instance != null)
+        {
+            InGameUIManager.Instance.ShowHeroUI(hero);
+        }
     }
 }

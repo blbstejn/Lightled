@@ -27,7 +27,7 @@ public class BaseUnit : MonoBehaviour
     public Faction Faction;
 
     [Header("Health")]
-    [SerializeField] protected int maxHP = 10;
+    public int maxHP = 10;
     public int CurrentHP { get; private set; }
     public bool IsAlive => CurrentHP > 0;
     
@@ -36,8 +36,8 @@ public class BaseUnit : MonoBehaviour
     public int CurrentActionPoints { get; protected set; }
 
     [Header("Abilities")]
-    private List<UnitAbility> _abilities = new List<UnitAbility>();
-    public IReadOnlyList<UnitAbility> Abilities => _abilities;
+    public List<UnitAbility> unitAbilities = new List<UnitAbility>();
+    public IReadOnlyList<UnitAbility> Abilities => unitAbilities;
     
     [Header("Movement")]
     [SerializeField] protected MovementProfile movementProfile;
@@ -220,7 +220,7 @@ public class BaseUnit : MonoBehaviour
     {
         if (!IsAlive)
             return;
-        
+
         CurrentHP -= amount;
         CurrentHP = Mathf.Max(CurrentHP, 0);
 

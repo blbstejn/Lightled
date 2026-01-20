@@ -3,9 +3,8 @@ using UnityEngine;
 
 public class FlamethrowerAbility : TargetedAbility
 {
-    public override string Name => "Flamethrower";
-    public override int APCost => 2;
-    public override bool isContextual => true;
+    public override string abilityName => "Flamethrower";
+    public override int actionPointCost => 2;
 
     [SerializeField] private int range = 3; // How many tiles forward
     [SerializeField] private int maxCharges = 12;
@@ -23,7 +22,7 @@ public class FlamethrowerAbility : TargetedAbility
         if (unit == null || target == null)
             return false;
 
-        if (!unit.CanPay(APCost))
+        if (!unit.CanPay(actionPointCost))
             return false;
 
         // Check if flamethrower has charges left
@@ -50,7 +49,7 @@ public class FlamethrowerAbility : TargetedAbility
         if (unit is not BaseHero hero)
             return;
 
-        unit.SpendActionPoints(APCost);
+        unit.SpendActionPoints(actionPointCost);
 
         // Consume one charge
         remainingCharges--;

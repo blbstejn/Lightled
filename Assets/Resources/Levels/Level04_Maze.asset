@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 00000000000000000000000000000000, type: 3}
+  m_Script: {fileID: 11500000, guid: 0392c420653f98e448744b6ced14235b, type: 3}
   m_Name: Level04_Maze
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   levelName: The Labyrinth
   levelNumber: 4
   gridRows:
@@ -33,5 +33,5 @@ MonoBehaviour:
   - {x: 1, y: 1}
   enemySpawnPoints:
   - {x: 14, y: 10}
-  heroCount: 1
+  heroCount: 5
   enemyCount: 1

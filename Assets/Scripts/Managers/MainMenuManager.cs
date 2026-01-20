@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 /// <summary>
 /// Manages the main menu UI navigation and level loading.
@@ -16,8 +17,7 @@ public class MainMenuManager : MonoBehaviour
 
     [Header("Level Selection")]
     [SerializeField] private LevelData[] availableLevels;
-    [SerializeField] private Transform levelButtonContainer;
-    [SerializeField] private GameObject levelButtonPrefab;
+    [SerializeField] private Transform levelButtonContainer; // Parent for dynamically created buttons (e.g., Vertical Layout Group)
 
     [Header("Scene Management")]
     [SerializeField] private string gameplaySceneName = "TestScene";
@@ -77,38 +77,80 @@ public class MainMenuManager : MonoBehaviour
     #region Level Selection
 
     /// <summary>
-    /// Generates a button for each available level in the level select panel.
+    /// Dynamically creates buttons for each level using Unity's built-in UI system.
+    /// Creates TextMeshPro buttons programmatically - no prefab needed!
     /// </summary>
     private void GenerateLevelButtons()
     {
-        if (levelButtonContainer == null || levelButtonPrefab == null)
+        if (levelButtonContainer == null)
         {
-            Debug.LogWarning("MainMenuManager: Level button container or prefab not assigned!");
+            Debug.LogWarning("MainMenuManager: Level button container not assigned!");
             return;
         }
 
-        // Clear existing buttons
+        if (availableLevels == null || availableLevels.Length == 0)
+        {
+            Debug.LogWarning("MainMenuManager: No levels assigned!");
+            return;
+        }
+
+        // Clear any existing buttons
         foreach (Transform child in levelButtonContainer)
         {
             Destroy(child.gameObject);
         }
 
-        // Create button for each level
+        // Create a button for each level
         for (int i = 0; i < availableLevels.Length; i++)
         {
             LevelData level = availableLevels[i];
             if (level == null) continue;
 
-            GameObject buttonObj = Instantiate(levelButtonPrefab, levelButtonContainer);
-            Button button = buttonObj.GetComponent<Button>();
-            Text buttonText = buttonObj.GetComponentInChildren<Text>();
+            // Create button GameObject
+            GameObject buttonObj = new GameObject($"LevelButton_{i}_{level.levelName}", typeof(RectTransform));
+            buttonObj.transform.SetParent(levelButtonContainer, false);
 
-            if (buttonText != null)
-            {
-                buttonText.text = level.levelName;
-            }
+            // Configure RectTransform for proper sizing
+            RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(300, 50); // Width x Height
+            rectTransform.anchorMin = new Vector2(0, 1);
+            rectTransform.anchorMax = new Vector2(0, 1);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
 
-            // Capture level in closure for button callback
+            // Add Button component
+            Button button = buttonObj.AddComponent<Button>();
+
+            // Add Image component for button visual
+            Image buttonImage = buttonObj.AddComponent<Image>();
+            buttonImage.color = new Color(0.2f, 0.2f, 0.2f, 1f); // Dark gray background
+
+            // Create TextMeshPro text child
+            GameObject textObj = new GameObject("Text", typeof(RectTransform));
+            textObj.transform.SetParent(buttonObj.transform, false);
+
+            RectTransform textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero; // Fill parent
+            textRect.offsetMin = new Vector2(10, 5); // Padding
+            textRect.offsetMax = new Vector2(-10, -5);
+
+            // Add TextMeshProUGUI component
+            TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
+            tmpText.text = level.levelName;
+            tmpText.fontSize = 24;
+            tmpText.color = Color.white;
+            tmpText.alignment = TextAlignmentOptions.Center;
+
+            // Setup button colors
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(0.2f, 0.2f, 0.2f, 1f);
+            colors.highlightedColor = new Color(0.3f, 0.3f, 0.3f, 1f);
+            colors.pressedColor = new Color(0.15f, 0.15f, 0.15f, 1f);
+            colors.selectedColor = new Color(0.25f, 0.25f, 0.25f, 1f);
+            button.colors = colors;
+
+            // Assign click listener
             LevelData capturedLevel = level;
             button.onClick.AddListener(() => OnLevelSelected(capturedLevel));
         }

@@ -2,9 +2,8 @@
 
 public class MoveAbility : TargetedAbility
 {
-    public override string Name => "Move";
-    public override int APCost => 0; // dynamic
-    public override bool isContextual => true;
+    public override string abilityName => "Move";
+    public override int actionPointCost => 0; // Dynamic - calculated per movement
 
     public override bool CanExecute(BaseUnit unit, Tile target)
     {

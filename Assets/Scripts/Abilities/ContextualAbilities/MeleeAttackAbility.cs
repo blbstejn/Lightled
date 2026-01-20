@@ -3,13 +3,12 @@ using UnityEngine;
 
 public class MeleeAttackAbility : TargetedAbility
 {
-    public override string Name => "Melee Attack";
-    public override int APCost => 1;
-    public override bool isContextual => true;
+    public override string abilityName => "Melee Attack";
+    public override int actionPointCost => 1;
 
     public override bool CanExecute(BaseUnit unit, Tile target)
     {
-        if (unit.CurrentActionPoints < APCost)
+        if (unit.CurrentActionPoints < actionPointCost)
             return false;
 
         Tile targetTile = unit.GetForwardTile();
@@ -30,7 +29,7 @@ public class MeleeAttackAbility : TargetedAbility
         Tile targetTile = unit.GetForwardTile();
         BaseUnit targetUnit = targetTile.OccupiedUnit;
 
-        unit.SpendActionPoints(APCost);
+        unit.SpendActionPoints(actionPointCost);
 
         // Melee attack breaks sustained fire
         unit.BreakSustainedFire();
