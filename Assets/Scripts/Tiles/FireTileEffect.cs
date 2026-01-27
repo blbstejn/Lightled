@@ -29,8 +29,8 @@ public class FireTileEffect : MonoBehaviour
         {
             BaseUnit unit = AffectedTile.OccupiedUnit;
 
-            // Only affect enemies (aliens)
-            if (unit.Faction == Faction.Enemy)
+            // Only affect targetable enemies (aliens) - blips lurking on spawn tiles are immune
+            if (unit.Faction == Faction.Enemy && unit.IsTargetable)
             {
                 // Roll 2+ dice (d6, success on 2-6)
                 int roll = Random.Range(1, 7);

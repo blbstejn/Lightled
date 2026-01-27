@@ -43,6 +43,12 @@ public class RangedAttackAbility : TargetedAbility
             return false;
         }
 
+        if (!target.OccupiedUnit.IsTargetable)
+        {
+            Debug.Log($"[RangedAttack] CanExecute: {target.OccupiedUnit.UnitName} is not targetable (lurking on spawn tile)");
+            return false;
+        }
+
         if (target.OccupiedUnit.Faction == unit.Faction)
         {
             Debug.Log($"[RangedAttack] CanExecute: Target {target.OccupiedUnit.UnitName} is same faction");

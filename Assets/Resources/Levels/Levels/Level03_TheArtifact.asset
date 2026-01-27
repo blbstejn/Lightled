@@ -10,15 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0392c420653f98e448744b6ced14235b, type: 3}
-  m_Name: Level05
+  m_Name: Level03_TheArtifact
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
-  levelName: HalloWelt
-  levelNumber: 5
+  levelName: The Artifact
+  levelNumber: 3
+  description: Enter level description here...
   gridRows:
-  - 
-  - 
-  - 
-  - 
   - 
   walkableChar: 46
   wallChar: 35

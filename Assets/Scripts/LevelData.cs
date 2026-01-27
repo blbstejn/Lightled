@@ -11,6 +11,10 @@ public class LevelData : ScriptableObject
     public string levelName = "Level 1";
     public int levelNumber = 1;
 
+    [TextArea(2, 5)]
+    [Tooltip("Description shown in the level select screen")]
+    public string description = "Enter level description here...";
+
     [Header("Grid Layout")]
     [Tooltip("Each string represents one row.\n" +
              "Characters:\n" +

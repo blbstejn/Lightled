@@ -30,6 +30,12 @@ public class BaseUnit : MonoBehaviour
     public int maxHP = 10;
     public int CurrentHP { get; private set; }
     public bool IsAlive => CurrentHP > 0;
+
+    /// <summary>
+    /// Whether this unit can be targeted by attacks.
+    /// Override in subclasses for special cases (e.g., blips on spawn tiles).
+    /// </summary>
+    public virtual bool IsTargetable => true;
     
     [Header("ActionPoints")]
     public int MaxActionPoints { get; protected set; } = 4;

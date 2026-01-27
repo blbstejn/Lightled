@@ -51,6 +51,11 @@ public class Enemy2 : BaseEnemy
     public bool IsRevealed => _isRevealed;
 
     /// <summary>
+    /// Blips on BlipSpawnTiles cannot be targeted - they must enter the battlefield first.
+    /// </summary>
+    public override bool IsTargetable => OccupiedTile != null && OccupiedTile is not BlipSpawnTile;
+
+    /// <summary>
     /// Called by AI to intentionally reveal the blip (for ambush).
     /// Triggers the same reveal process as being spotted by heroes.
     /// </summary>

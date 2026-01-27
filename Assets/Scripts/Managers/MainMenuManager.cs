@@ -17,12 +17,23 @@ public class MainMenuManager : MonoBehaviour
 
     [Header("Level Selection")]
     [SerializeField] private LevelData[] availableLevels;
-    [SerializeField] private Transform levelButtonContainer; // Parent for dynamically created buttons (e.g., Vertical Layout Group)
+    [SerializeField] private Transform levelButtonContainer; // Parent for dynamically created buttons
+
+    [Header("Level Details Panel (Optional - assign for two-step selection)")]
+    [Tooltip("Text component to display level name when selected")]
+    [SerializeField] private TextMeshProUGUI levelNameText;
+    [Tooltip("Text component to display level description when selected")]
+    [SerializeField] private TextMeshProUGUI levelDescriptionText;
+    [Tooltip("Button to confirm and start the selected level")]
+    [SerializeField] private Button confirmLevelButton;
+    [Tooltip("Parent panel for level details (hidden until a level is selected)")]
+    [SerializeField] private GameObject levelDetailsPanel;
 
     [Header("Scene Management")]
     [SerializeField] private string gameplaySceneName = "TestScene";
 
     private LevelData _selectedLevel;
+    private Button _currentlySelectedButton;
 
     void Start()
     {
@@ -30,6 +41,26 @@ public class MainMenuManager : MonoBehaviour
         HideAllPanels();
         ShowMainMenu();
         GenerateLevelButtons();
+        SetupLevelDetails();
+    }
+
+    /// <summary>
+    /// Sets up the level details panel and confirm button.
+    /// </summary>
+    private void SetupLevelDetails()
+    {
+        // Hide level details panel until a level is selected
+        if (levelDetailsPanel != null)
+        {
+            levelDetailsPanel.SetActive(false);
+        }
+
+        // Wire up confirm button
+        if (confirmLevelButton != null)
+        {
+            confirmLevelButton.onClick.AddListener(OnConfirmLevelClicked);
+            confirmLevelButton.interactable = false; // Disabled until level selected
+        }
     }
 
     /// <summary>
@@ -118,9 +149,9 @@ public class MainMenuManager : MonoBehaviour
         }
 
         // Button layout settings
-        float buttonWidth = 300f;
-        float buttonHeight = 50f;
-        float buttonSpacing = 10f;
+        float buttonWidth = 200f;
+        float buttonHeight = 40f;
+        float buttonSpacing = 5f;
 
         // Create a button for each level
         for (int i = 0; i < availableLevels.Length; i++)
@@ -132,20 +163,20 @@ public class MainMenuManager : MonoBehaviour
             GameObject buttonObj = new GameObject($"LevelButton_{i}_{level.levelName}", typeof(RectTransform));
             buttonObj.transform.SetParent(levelButtonContainer, false);
 
-            // Configure RectTransform - position each button manually
+            // Configure RectTransform - anchor to top-left
             RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
             rectTransform.sizeDelta = new Vector2(buttonWidth, buttonHeight);
-            rectTransform.anchorMin = new Vector2(0.5f, 1f); // Anchor to top-center
-            rectTransform.anchorMax = new Vector2(0.5f, 1f);
-            rectTransform.pivot = new Vector2(0.5f, 1f); // Pivot at top-center
-            rectTransform.anchoredPosition = new Vector2(0, -i * (buttonHeight + buttonSpacing)); // Stack vertically
+            rectTransform.anchorMin = new Vector2(0f, 1f); // Anchor to top-left
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f); // Pivot at top-left
+            rectTransform.anchoredPosition = new Vector2(10, -i * (buttonHeight + buttonSpacing)); // Stack vertically with left padding
 
             // Add Button component
             Button button = buttonObj.AddComponent<Button>();
 
-            // Add Image component for button visual
+            // Add Image component for button visual (Unity default button style)
             Image buttonImage = buttonObj.AddComponent<Image>();
-            buttonImage.color = new Color(0.2f, 0.2f, 0.2f, 1f); // Dark gray background
+            buttonImage.color = Color.white; // Standard Unity button base color
 
             // Create TextMeshPro text child
             GameObject textObj = new GameObject("Text", typeof(RectTransform));
@@ -161,31 +192,118 @@ public class MainMenuManager : MonoBehaviour
             // Add TextMeshProUGUI component
             TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
             tmpText.text = level.levelName;
-            tmpText.fontSize = 24;
-            tmpText.color = Color.white;
-            tmpText.alignment = TextAlignmentOptions.Center;
+            tmpText.fontSize = 20;
+            tmpText.color = new Color(0.2f, 0.2f, 0.2f, 1f); // Dark text on light button
+            tmpText.alignment = TextAlignmentOptions.Left;
 
-            // Setup button colors
+            // Setup button colors (Unity default style)
             ColorBlock colors = button.colors;
-            colors.normalColor = new Color(0.2f, 0.2f, 0.2f, 1f);
-            colors.highlightedColor = new Color(0.3f, 0.3f, 0.3f, 1f);
-            colors.pressedColor = new Color(0.15f, 0.15f, 0.15f, 1f);
-            colors.selectedColor = new Color(0.25f, 0.25f, 0.25f, 1f);
+            colors.normalColor = new Color(1f, 1f, 1f, 1f);        // White
+            colors.highlightedColor = new Color(0.96f, 0.96f, 0.96f, 1f); // Slightly darker on hover
+            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);     // Darker when pressed
+            colors.selectedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
             button.colors = colors;
 
             // Assign click listener
             LevelData capturedLevel = level;
-            button.onClick.AddListener(() => OnLevelSelected(capturedLevel));
+            Button capturedButton = button;
+            button.onClick.AddListener(() => OnLevelSelected(capturedLevel, capturedButton));
         }
     }
 
     /// <summary>
     /// Called when a level button is clicked.
+    /// Shows level details if panel is assigned, otherwise loads directly.
     /// </summary>
-    private void OnLevelSelected(LevelData level)
+    private void OnLevelSelected(LevelData level, Button clickedButton = null)
     {
         _selectedLevel = level;
-        LoadGameplayScene();
+
+        // Update visual selection state
+        if (_currentlySelectedButton != null)
+        {
+            // Reset previous button to normal white
+            var prevColors = _currentlySelectedButton.colors;
+            prevColors.normalColor = Color.white;
+            _currentlySelectedButton.colors = prevColors;
+        }
+
+        _currentlySelectedButton = clickedButton;
+        if (_currentlySelectedButton != null)
+        {
+            // Highlight selected button with light blue tint
+            var colors = _currentlySelectedButton.colors;
+            colors.normalColor = new Color(0.85f, 0.92f, 1f, 1f); // Light blue tint
+            _currentlySelectedButton.colors = colors;
+        }
+
+        // If level details panel exists, show details and wait for confirm
+        if (levelDetailsPanel != null)
+        {
+            ShowLevelDetails(level);
+        }
+        else
+        {
+            // No details panel - load directly (old behavior)
+            LoadGameplayScene();
+        }
+    }
+
+    /// <summary>
+    /// Shows the level details in the details panel.
+    /// </summary>
+    private void ShowLevelDetails(LevelData level)
+    {
+        Debug.Log($"[MainMenu] ShowLevelDetails called for: {level.levelName}");
+        Debug.Log($"[MainMenu] levelDetailsPanel assigned: {levelDetailsPanel != null}");
+        Debug.Log($"[MainMenu] levelNameText assigned: {levelNameText != null}");
+        Debug.Log($"[MainMenu] levelDescriptionText assigned: {levelDescriptionText != null}");
+
+        if (levelDetailsPanel != null)
+        {
+            levelDetailsPanel.SetActive(true);
+            Debug.Log($"[MainMenu] Panel activated");
+        }
+        else
+        {
+            Debug.LogWarning("[MainMenu] levelDetailsPanel is NOT assigned in Inspector!");
+        }
+
+        if (levelNameText != null)
+        {
+            levelNameText.text = level.levelName;
+            Debug.Log($"[MainMenu] Set name to: {level.levelName}");
+        }
+        else
+        {
+            Debug.LogWarning("[MainMenu] levelNameText is NOT assigned in Inspector!");
+        }
+
+        if (levelDescriptionText != null)
+        {
+            levelDescriptionText.text = level.description;
+            Debug.Log($"[MainMenu] Set description to: {level.description}");
+        }
+        else
+        {
+            Debug.LogWarning("[MainMenu] levelDescriptionText is NOT assigned in Inspector!");
+        }
+
+        if (confirmLevelButton != null)
+        {
+            confirmLevelButton.interactable = true;
+        }
+    }
+
+    /// <summary>
+    /// Called when the confirm button is clicked to start the selected level.
+    /// </summary>
+    public void OnConfirmLevelClicked()
+    {
+        if (_selectedLevel != null)
+        {
+            LoadGameplayScene();
+        }
     }
 
     /// <summary>

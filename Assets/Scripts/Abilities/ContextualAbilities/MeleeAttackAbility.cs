@@ -43,6 +43,12 @@ public class MeleeAttackAbility : TargetedAbility
             return false;
         }
 
+        if (!forwardTile.OccupiedUnit.IsTargetable)
+        {
+            Debug.Log($"[MeleeAttack] CanExecute: {forwardTile.OccupiedUnit.UnitName} is not targetable (lurking on spawn tile)");
+            return false;
+        }
+
         if (forwardTile.OccupiedUnit.Faction == unit.Faction)
         {
             Debug.Log($"[MeleeAttack] CanExecute: Target {forwardTile.OccupiedUnit.UnitName} is same faction");
