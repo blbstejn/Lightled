@@ -56,6 +56,25 @@ public class Enemy2 : BaseEnemy
     public override bool IsTargetable => OccupiedTile != null && OccupiedTile is not BlipSpawnTile;
 
     /// <summary>
+    /// Kills the blip instantly without spawning ghouls (used by flamethrower).
+    /// </summary>
+    public void KillByFire()
+    {
+        Debug.Log($"[Blip] {UnitName} incinerated by fire - no ghouls spawned!");
+
+        // Clear tile
+        if (OccupiedTile != null)
+        {
+            OccupiedTile.OccupiedUnit = null;
+            OccupiedTile = null;
+        }
+
+        // Remove from tracking and destroy
+        UnitManager.Instance.OnEnemyDestroyed(this);
+        Destroy(gameObject);
+    }
+
+    /// <summary>
     /// Called by AI to intentionally reveal the blip (for ambush).
     /// Triggers the same reveal process as being spotted by heroes.
     /// </summary>

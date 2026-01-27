@@ -58,7 +58,7 @@ public static class CombatDebugLog
     }
 
     /// <summary>
-    /// Logs a melee attack attempt with dice rolls.
+    /// Logs a melee attack attempt with dice rolls (legacy).
     /// </summary>
     public static void LogMeleeAttack(string attacker, string target, int roll1, int roll2, int threshold, bool hit)
     {
@@ -68,6 +68,34 @@ public static class CombatDebugLog
 
         AddEntry(hit ? LogType.Hit : LogType.Miss,
             $"MELEE: {attacker} -> {target}: {rollStr} = {result}", color);
+    }
+
+    /// <summary>
+    /// Logs a contested melee attack with best-of-dice comparison.
+    /// </summary>
+    public static void LogMeleeContest(string attacker, string defender, int attackerDice, int attackerBest, int defenderDice, int defenderBest)
+    {
+        string result;
+        Color color;
+
+        if (attackerBest > defenderBest)
+        {
+            result = $"{attacker} WINS";
+            color = new Color(0.4f, 1f, 0.4f);
+        }
+        else if (defenderBest > attackerBest)
+        {
+            result = $"{defender} WINS";
+            color = new Color(1f, 0.6f, 0.4f);
+        }
+        else
+        {
+            result = "TIE";
+            color = new Color(0.7f, 0.7f, 0.7f);
+        }
+
+        AddEntry(LogType.Attack,
+            $"MELEE: {attacker} ({attackerDice}d6 best:{attackerBest}) vs {defender} ({defenderDice}d6 best:{defenderBest}) = {result}", color);
     }
 
     /// <summary>

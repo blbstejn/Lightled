@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class MeleeAttackAbility : TargetedAbility
 {
@@ -63,9 +63,6 @@ public class MeleeAttackAbility : TargetedAbility
     {
         Debug.Log($"[MeleeAttack] Execute: {unit.UnitName} attacking tile ({target.X},{target.Y})");
 
-        // Note: CanExecute is checked in Tile.OnPointerClick before calling Execute
-        // CP is also spent there if needed, so we only spend remaining AP here
-
         Tile forwardTile = unit.GetForwardTile();
         if (forwardTile == null || forwardTile.OccupiedUnit == null)
         {
@@ -73,9 +70,10 @@ public class MeleeAttackAbility : TargetedAbility
             return;
         }
 
-        BaseUnit targetUnit = forwardTile.OccupiedUnit;
+        BaseUnit attacker = unit;
+        BaseUnit defender = forwardTile.OccupiedUnit;
 
-        // Spend whatever AP the hero has (up to the cost)
+        // Spend AP
         int apToSpend = Mathf.Min(unit.CurrentActionPoints, actionPointCost);
         if (apToSpend > 0)
         {
@@ -86,35 +84,110 @@ public class MeleeAttackAbility : TargetedAbility
         // Melee attack breaks sustained fire
         unit.BreakSustainedFire();
 
-        // Roll dice for melee attack (2d6, need 5+ on either die to hit)
-        int roll1 = Random.Range(1, 7);
-        int roll2 = Random.Range(1, 7);
-        int hitThreshold = 5; // Melee is easier to hit
+        // Determine dice count: heroes get 1 die, ghouls/enemies get 3 dice
+        int attackerDice = GetDiceCount(attacker);
+        int defenderDice = GetDiceCount(defender);
 
-        Debug.Log($"[MeleeAttack] {unit.UnitName} attacking {targetUnit.UnitName} - Dice rolls: {roll1}, {roll2} (need {hitThreshold}+ to hit)");
+        // Roll dice and get highest for each side
+        int attackerBest = RollDiceGetHighest(attackerDice);
+        int defenderBest = RollDiceGetHighest(defenderDice);
 
-        bool hit = (roll1 >= hitThreshold) || (roll2 >= hitThreshold);
+        Debug.Log($"[MeleeAttack] {attacker.UnitName} ({attackerDice}d6) rolled best: {attackerBest} vs {defender.UnitName} ({defenderDice}d6) rolled best: {defenderBest}");
 
-        // Log the attack to combat debug
-        CombatDebugLog.LogMeleeAttack(unit.UnitName, targetUnit.UnitName, roll1, roll2, hitThreshold, hit);
+        // Log the contested melee
+        CombatDebugLog.LogMeleeContest(attacker.UnitName, defender.UnitName, attackerDice, attackerBest, defenderDice, defenderBest);
 
-        if (hit)
+        if (attackerBest > defenderBest)
         {
-            targetUnit.TakeDamage(1, unit);
+            // Attacker wins - defender dies
+            Debug.Log($"[MeleeAttack] {attacker.UnitName} WINS! {defender.UnitName} is killed!");
+            defender.TakeDamage(9999, attacker);
+            CombatDebugLog.LogKill(defender.UnitName, attacker.UnitName);
+        }
+        else if (defenderBest > attackerBest)
+        {
+            // Defender wins - check if defender is facing attacker
+            bool defenderFacingAttacker = IsUnitFacingTarget(defender, attacker);
 
-            if (targetUnit != null && targetUnit.IsAlive)
+            if (defenderFacingAttacker)
             {
-                Debug.Log($"[MeleeAttack] HIT! {targetUnit.UnitName} takes 1 damage (HP: {targetUnit.CurrentHP}/{targetUnit.maxHP})");
+                // Defender is facing attacker - attacker dies
+                Debug.Log($"[MeleeAttack] {defender.UnitName} WINS and is facing attacker! {attacker.UnitName} is killed!");
+                attacker.TakeDamage(9999, defender);
+                CombatDebugLog.LogKill(attacker.UnitName, defender.UnitName);
             }
             else
             {
-                Debug.Log($"[MeleeAttack] HIT! Target killed!");
-                CombatDebugLog.LogKill(targetUnit.UnitName, unit.UnitName);
+                // Defender not facing attacker - defender turns to face, no death
+                Debug.Log($"[MeleeAttack] {defender.UnitName} WINS but was not facing. Turning to face {attacker.UnitName}.");
+                TurnUnitTowardTarget(defender, attacker);
             }
         }
         else
         {
-            Debug.Log($"[MeleeAttack] MISS! Both dice ({roll1}, {roll2}) failed to meet threshold {hitThreshold}+");
+            // Tie - nothing happens
+            Debug.Log($"[MeleeAttack] TIE! Both rolled {attackerBest}. No effect.");
         }
+    }
+
+    private int GetDiceCount(BaseUnit unit)
+    {
+        // Heroes get 1 die, enemies (ghouls) get 3 dice
+        return unit.Faction == Faction.Hero ? 1 : 3;
+    }
+
+    private int RollDiceGetHighest(int diceCount)
+    {
+        int highest = 0;
+        for (int i = 0; i < diceCount; i++)
+        {
+            int roll = Random.Range(1, 7);
+            if (roll > highest)
+                highest = roll;
+        }
+        return highest;
+    }
+
+    private bool IsUnitFacingTarget(BaseUnit unit, BaseUnit target)
+    {
+        if (unit.OccupiedTile == null || target.OccupiedTile == null)
+            return false;
+
+        // Get direction from unit to target
+        int dx = target.OccupiedTile.X - unit.OccupiedTile.X;
+        int dy = target.OccupiedTile.Y - unit.OccupiedTile.Y;
+
+        // Normalize to get cardinal direction
+        Vector2Int directionToTarget = new Vector2Int(
+            dx == 0 ? 0 : (dx > 0 ? 1 : -1),
+            dy == 0 ? 0 : (dy > 0 ? 1 : -1)
+        );
+
+        // Check if unit's forward matches direction to target
+        return unit.Forward == directionToTarget;
+    }
+
+    private void TurnUnitTowardTarget(BaseUnit unit, BaseUnit target)
+    {
+        if (unit.OccupiedTile == null || target.OccupiedTile == null)
+            return;
+
+        // Get direction from unit to target
+        int dx = target.OccupiedTile.X - unit.OccupiedTile.X;
+        int dy = target.OccupiedTile.Y - unit.OccupiedTile.Y;
+
+        // Determine the primary direction (cardinal only)
+        FacingDirection newFacing;
+        if (Mathf.Abs(dx) >= Mathf.Abs(dy))
+        {
+            newFacing = dx > 0 ? FacingDirection.Right : FacingDirection.Left;
+        }
+        else
+        {
+            newFacing = dy > 0 ? FacingDirection.Up : FacingDirection.Down;
+        }
+
+        unit.SetFacing(newFacing);
+        Debug.Log($"[MeleeAttack] {unit.UnitName} turned to face {newFacing}");
     }
 }

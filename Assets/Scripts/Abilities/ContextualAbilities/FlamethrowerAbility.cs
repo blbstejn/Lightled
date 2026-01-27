@@ -6,8 +6,7 @@ public class FlamethrowerAbility : TargetedAbility
     public override string abilityName => "Flamethrower";
     public override int actionPointCost => 2;
 
-    [SerializeField] private int range = 12; // How many tiles forward
-    [SerializeField] private int maxCharges = 12;
+    [SerializeField] private int maxCharges = 6;
     private int remainingCharges;
 
     public int RemainingCharges => remainingCharges;
@@ -25,20 +24,24 @@ public class FlamethrowerAbility : TargetedAbility
         if (!unit.CanPay(actionPointCost))
             return false;
 
-        // Check if flamethrower has charges left
         if (remainingCharges <= 0)
         {
-            Debug.Log("Flamethrower out of charges!");
+            Debug.Log("[Flamethrower] Out of charges!");
             return false;
         }
 
         if (unit is not BaseHero hero)
             return false;
 
-        // Check if target is in the 3x3 flame area in front of the hero
-        HashSet<Tile> flameTiles = GetFlameTiles(hero);
+        // Can target any tile in line of sight (including unoccupied tiles)
+        var losTiles = hero.GetLineOfSightTiles();
+        if (!losTiles.Contains(target))
+        {
+            Debug.Log($"[Flamethrower] Target tile ({target.X},{target.Y}) not in line of sight");
+            return false;
+        }
 
-        return flameTiles.Contains(target);
+        return true;
     }
 
     public override void Execute(BaseUnit unit, Tile target)
@@ -50,49 +53,72 @@ public class FlamethrowerAbility : TargetedAbility
             return;
 
         unit.SpendActionPoints(actionPointCost);
-
-        // Consume one charge
         remainingCharges--;
 
-        // Get all tiles in the 3x3 area
-        HashSet<Tile> flameTiles = GetFlameTiles(hero);
+        // Get target tile + all 8 neighbors (9 tiles total)
+        HashSet<Tile> affectedTiles = GetAffectedTiles(target);
 
-        // Set fire to all tiles and immediately roll to kill aliens
-        foreach (Tile tile in flameTiles)
+        Debug.Log($"[Flamethrower] {hero.UnitName} fires at ({target.X},{target.Y})! Affecting {affectedTiles.Count} tiles. Charges: {remainingCharges}/{maxCharges}");
+
+        // Roll to kill each unit on affected tiles
+        int killed = 0;
+        foreach (Tile tile in affectedTiles)
         {
-            FireEffectManager.Instance.CreateFireEffect(tile);
-        }
-
-        Debug.Log($"{hero.UnitName} used Flamethrower! {flameTiles.Count} tiles set on fire. Charges remaining: {remainingCharges}/{maxCharges}");
-
-        // Log to combat debug
-        CombatDebugLog.LogFlamethrower(hero.UnitName, flameTiles.Count, remainingCharges, maxCharges);
-    }
-
-    private HashSet<Tile> GetFlameTiles(BaseHero hero)
-    {
-        HashSet<Tile> result = new HashSet<Tile>();
-
-        if (hero.OccupiedTile == null)
-            return result;
-
-        Vector2Int origin = new Vector2Int(hero.OccupiedTile.X, hero.OccupiedTile.Y);
-        Vector2Int forward = hero.Forward;
-        Vector2Int perpendicular = hero.Perpendicular;
-
-        // Create 3x3 area at specified range
-        for (int depth = 1; depth <= range; depth++)
-        {
-            for (int lateral = -1; lateral <= 1; lateral++)
+            if (tile.OccupiedUnit != null && tile.OccupiedUnit.IsAlive)
             {
-                Vector2Int pos = origin + forward * depth + perpendicular * lateral;
-                Tile tile = GridManager.Instance.GetTileAtPosition(pos);
+                BaseUnit targetUnit = tile.OccupiedUnit;
 
-                if (tile != null)
+                // Roll 2+ on d6 to kill
+                int roll = Random.Range(1, 7);
+                int threshold = 2;
+                bool isKilled = roll >= threshold;
+
+                Debug.Log($"[Flamethrower] Roll for {targetUnit.UnitName} at ({tile.X},{tile.Y}): {roll} (need {threshold}+) - {(isKilled ? "KILLED" : "SURVIVED")}");
+
+                CombatDebugLog.LogFireDamage(targetUnit.UnitName, tile.X, tile.Y, roll, threshold, isKilled);
+
+                if (isKilled)
                 {
-                    result.Add(tile);
+                    killed++;
+
+                    // Blips are killed without spawning ghouls
+                    if (targetUnit is Enemy2 blip)
+                    {
+                        blip.KillByFire();
+                        CombatDebugLog.LogKill(targetUnit.UnitName, $"{hero.UnitName} (Flamethrower)");
+                    }
+                    else
+                    {
+                        targetUnit.TakeDamage(9999, hero);
+                        CombatDebugLog.LogKill(targetUnit.UnitName, $"{hero.UnitName} (Flamethrower)");
+                    }
                 }
             }
+        }
+
+        // Spawn fire on all affected tiles (blocks LOS, movement, damages adjacent units)
+        // Skip immediate damage roll since we already did it above
+        foreach (Tile tile in affectedTiles)
+        {
+            if (FireEffectManager.Instance != null)
+            {
+                FireEffectManager.Instance.CreateFireEffect(tile, rollDamageImmediately: false);
+            }
+        }
+
+        CombatDebugLog.LogFlamethrower(hero.UnitName, affectedTiles.Count, remainingCharges, maxCharges);
+        Debug.Log($"[Flamethrower] Attack complete. Killed {killed} units. Fire spawned on {affectedTiles.Count} tiles.");
+    }
+
+    private HashSet<Tile> GetAffectedTiles(Tile center)
+    {
+        HashSet<Tile> result = new HashSet<Tile> { center };
+
+        // Add all 8 neighbors
+        var neighbors = GridManager.Instance.GetNeighbours(center);
+        foreach (Tile neighbor in neighbors)
+        {
+            result.Add(neighbor);
         }
 
         return result;

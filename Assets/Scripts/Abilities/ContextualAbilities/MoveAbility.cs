@@ -22,6 +22,9 @@ public class MoveAbility : TargetedAbility
 
     public override void Execute(BaseUnit unit, Tile target)
     {
+        // Moving breaks sustained fire - must chain ranged attacks to keep the bonus
+        unit.BreakSustainedFire();
+
         unit.MoveOneTile(TargetTile);
 
         // Mark that unit has moved this turn (enables free shooting)

@@ -127,8 +127,12 @@ public class BaseHero : BaseUnit
 
                 anyTile = true;
 
+                // Check if tile blocks LOS (walls, void, or fire)
+                bool blocksLOS = tile.BlocksLineOfSight ||
+                    (FireEffectManager.Instance != null && FireEffectManager.Instance.IsFireBlockingLOS(tile));
+
                 // If this tile blocks line of sight, add its shadow cone but don't include it in result
-                if (tile.BlocksLineOfSight)
+                if (blocksLOS)
                 {
                     // The shadow extends from this tile outward
                     // Using the tile's angular range as the shadow boundaries

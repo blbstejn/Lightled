@@ -249,6 +249,12 @@ public class BaseUnit : MonoBehaviour
             Debug.Log($"[Hero Move] {UnitName} finished moving - checking blips for reveal");
             UnitManager.Instance.CheckAllBlipsForReveal();
         }
+
+        // Check for fire damage if entering a tile adjacent to fire
+        if (FireEffectManager.Instance != null)
+        {
+            FireEffectManager.Instance.CheckAdjacentFireDamage(this);
+        }
     }
 
     #endregion

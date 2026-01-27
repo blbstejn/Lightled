@@ -5,9 +5,8 @@ public class FireTileEffect : MonoBehaviour
     public Tile AffectedTile { get; private set; }
 
     private SpriteRenderer _fireRenderer;
-    private Color _fireColor = new Color(1f, 0.5f, 0f, 0.8f); // Orange with transparency
 
-    public void Initialize(Tile tile)
+    public void Initialize(Tile tile, Sprite sprite)
     {
         AffectedTile = tile;
 
@@ -18,8 +17,7 @@ public class FireTileEffect : MonoBehaviour
         fireVisual.transform.localScale = Vector3.one;
 
         _fireRenderer = fireVisual.AddComponent<SpriteRenderer>();
-        _fireRenderer.sprite = Resources.Load<Sprite>("Sprites/Square"); // Assuming you have a square sprite
-        _fireRenderer.color = _fireColor;
+        _fireRenderer.sprite = sprite;
         _fireRenderer.sortingOrder = 2; // Above tiles but below units
     }
 
