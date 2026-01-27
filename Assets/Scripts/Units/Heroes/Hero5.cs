@@ -21,8 +21,6 @@ public class Hero5 : BaseHero
         abilities.Add(ScriptableObject.CreateInstance<TurnLeftAbility>());
         abilities.Add(ScriptableObject.CreateInstance<TurnRightAbility>());
 
-        // Use reflection to set the private _abilities field
-        var field = typeof(BaseUnit).GetField("_abilities", BindingFlags.NonPublic | BindingFlags.Instance);
-        field.SetValue(this, abilities);
+        unitAbilities = abilities;
     }
 }

@@ -107,7 +107,7 @@ MonoBehaviour:
   UnitName: Blip
   OccupiedTile: {fileID: 0}
   Faction: 1
-  maxHP: 10
+  maxHP: 1
   unitAbilities: []
   movementProfile:
     allowSideways: 1
@@ -115,7 +115,7 @@ MonoBehaviour:
     backwardCost: 2
   moveSpeed: 5
   facing: 0
-  ghoulPrefab: {fileID: 0}
+  ghoulPrefab: {fileID: 2181189450159112630, guid: 180d7d8db17a0ed4caac63ae5e111299, type: 3}
   minGhouls: 1
   maxGhouls: 3
 --- !u!114 &-8866755193531709178

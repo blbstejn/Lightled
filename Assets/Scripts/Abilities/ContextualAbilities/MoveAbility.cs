@@ -11,9 +11,13 @@ public class MoveAbility : TargetedAbility
             return false;
 
         TargetTile = target;
-        
+
         int cost = unit.GetMoveCost(TargetTile);
-        return cost <= unit.CurrentActionPoints;
+        int heroAP = unit.CurrentActionPoints;
+        int availableCP = GameManager.Instance != null ? GameManager.Instance.CurrentCommandPoints : 0;
+
+        // Can move if AP covers it, OR AP + CP covers it
+        return cost <= heroAP || cost <= (heroAP + availableCP);
     }
 
     public override void Execute(BaseUnit unit, Tile target)

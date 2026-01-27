@@ -11,22 +11,28 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0392c420653f98e448744b6ced14235b, type: 3}
   m_Name: Level01_Tutorial
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   levelName: Tutorial - First Steps
   levelNumber: 1
   gridRows:
   - '##########'
+  - '#1.2.3.4.#'
+  - '#.5......#'
   - '#........#'
   - '#........#'
-  - '#........#'
-  - '#........#'
-  - '#........#'
+  - '#.......T#'
   - '##########'
   walkableChar: 46
+  wallChar: 35
   voidChar: 35
-  heroSpawnPoints:
-  - {x: 2, y: 3}
+  heroSpawnStart: 49
+  blipSpawnChar: 66
+  artifactChar: 65
+  targetChar: 84
+  heroSpawnPoints: []
   enemySpawnPoints:
-  - {x: 7, y: 3}
-  heroCount: 1
-  enemyCount: 1
+  - {x: 7, y: 4}
+  - {x: 5, y: 5}
+  heroCount: 5
+  enemyCount: 2
+  requiresArtifact: 0

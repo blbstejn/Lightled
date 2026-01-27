@@ -107,11 +107,20 @@ public class MainMenuManager : MonoBehaviour
             return;
         }
 
-        // Clear any existing buttons
-        foreach (Transform child in levelButtonContainer)
+        // Clear any existing dynamically created level buttons (preserve manually placed UI like Back button)
+        for (int i = levelButtonContainer.childCount - 1; i >= 0; i--)
         {
-            Destroy(child.gameObject);
+            Transform child = levelButtonContainer.GetChild(i);
+            if (child.name.StartsWith("LevelButton_"))
+            {
+                Destroy(child.gameObject);
+            }
         }
+
+        // Button layout settings
+        float buttonWidth = 300f;
+        float buttonHeight = 50f;
+        float buttonSpacing = 10f;
 
         // Create a button for each level
         for (int i = 0; i < availableLevels.Length; i++)
@@ -123,15 +132,13 @@ public class MainMenuManager : MonoBehaviour
             GameObject buttonObj = new GameObject($"LevelButton_{i}_{level.levelName}", typeof(RectTransform));
             buttonObj.transform.SetParent(levelButtonContainer, false);
 
-            // Configure RectTransform
+            // Configure RectTransform - position each button manually
             RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(300, 50); // Width x Height
-
-            // Add LayoutElement for proper sizing in Layout Groups
-            LayoutElement layoutElement = buttonObj.AddComponent<LayoutElement>();
-            layoutElement.minHeight = 50;
-            layoutElement.preferredHeight = 50;
-            layoutElement.preferredWidth = 300;
+            rectTransform.sizeDelta = new Vector2(buttonWidth, buttonHeight);
+            rectTransform.anchorMin = new Vector2(0.5f, 1f); // Anchor to top-center
+            rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            rectTransform.pivot = new Vector2(0.5f, 1f); // Pivot at top-center
+            rectTransform.anchoredPosition = new Vector2(0, -i * (buttonHeight + buttonSpacing)); // Stack vertically
 
             // Add Button component
             Button button = buttonObj.AddComponent<Button>();

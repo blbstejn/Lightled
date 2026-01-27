@@ -11,19 +11,33 @@ public class TurnRightAbility : UntargetedAbility
         if (unit == null)
             return false;
 
-        return unit.CanPay(actionPointCost);
+        int heroAP = unit.CurrentActionPoints;
+        int availableCP = GameManager.Instance != null ? GameManager.Instance.CurrentCommandPoints : 0;
+
+        // Can execute if AP covers it, OR AP + CP covers it
+        return heroAP >= actionPointCost || (heroAP + availableCP) >= actionPointCost;
     }
 
     public override void Execute(BaseUnit unit)
     {
-        if (!CanExecute(unit))
-            return;
+        // Note: CanExecute is checked before calling Execute
+        // CP is also spent by caller if needed, so we only spend remaining AP here
 
-        unit.SpendActionPoints(actionPointCost);
+        // Spend whatever AP the hero has (up to the cost)
+        int apToSpend = Mathf.Min(unit.CurrentActionPoints, actionPointCost);
+        if (apToSpend > 0)
+        {
+            unit.SpendActionPoints(apToSpend);
+        }
+
         unit.SetFacing(TurnRight(unit.Facing));
 
         // Turning breaks sustained fire (changes line of sight)
         unit.BreakSustainedFire();
+
+        // Check if any blips are now revealed after turning
+        Debug.Log($"[Turn Right] {unit.UnitName} turned right - checking blips for reveal");
+        UnitManager.Instance.CheckAllBlipsForReveal();
     }
 
     private FacingDirection TurnRight(FacingDirection dir)

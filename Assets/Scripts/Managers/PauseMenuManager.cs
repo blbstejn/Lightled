@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Manages the pause menu during gameplay.
@@ -40,8 +41,8 @@ public class PauseMenuManager : MonoBehaviour
 
     void Update()
     {
-        // Toggle pause menu with ESC key
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // Toggle pause menu with ESC key (New Input System)
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             if (_isPaused)
             {
@@ -71,6 +72,19 @@ public class PauseMenuManager : MonoBehaviour
         if (pauseButton != null)
         {
             pauseButton.SetActive(false);
+        }
+
+        // Deselect hero and hide UI
+        if (UnitManager.Instance != null)
+        {
+            UnitManager.Instance.SetSelectedHero(null);
+        }
+
+        // Clear grid highlights
+        if (GridManager.Instance != null)
+        {
+            GridManager.Instance.ClearMoveHighlights();
+            GridManager.Instance.ClearLineOfSight();
         }
     }
 

@@ -6,7 +6,9 @@ public class WalkableTile : Tile
 
     public override void Init(int x, int y)
     {
+        base.Init(x, y);
         bool isOffset = (x + y) % 2 == 1;
-        GetComponent<SpriteRenderer>().color = isOffset ? _offsetColor : _baseColor;
+        OriginalColor = isOffset ? _offsetColor : _baseColor;
+        _renderer.color = OriginalColor;
     }
 }

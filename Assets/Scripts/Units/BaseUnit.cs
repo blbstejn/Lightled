@@ -53,10 +53,18 @@ public class BaseUnit : MonoBehaviour
     public BaseUnit SustainedFireTarget { get; private set; }
     public bool HasSustainedFire => SustainedFireTarget != null;
 
+    [Header("Artifact")]
+    public bool HasArtifact { get; private set; }
+
     public virtual void Awake()
     {
         CurrentHP = maxHP;
         CurrentActionPoints = MaxActionPoints;
+
+        // Disable collider so raycasts pass through to tiles
+        var collider = GetComponent<Collider2D>();
+        if (collider != null)
+            collider.enabled = false;
     }
 
     public void StartNewTurn()
@@ -79,6 +87,17 @@ public class BaseUnit : MonoBehaviour
     public void BreakSustainedFire()
     {
         SustainedFireTarget = null;
+    }
+
+    public void PickupArtifact()
+    {
+        HasArtifact = true;
+        Debug.Log($"{UnitName} picked up the artifact!");
+    }
+
+    public void DropArtifact()
+    {
+        HasArtifact = false;
     }
 
     public Tile GetForwardTile()
@@ -159,10 +178,15 @@ public class BaseUnit : MonoBehaviour
     public void MoveOneTile(Tile target)
     {
         int cost = GetMoveCost(target);
-        if (cost > CurrentActionPoints)
-            return;
-        
-        SpendActionPoints(cost);
+
+        // Note: CanExecute is checked in Tile.OnPointerClick before calling Execute
+        // CP is also spent there if needed, so we only spend remaining AP here
+        int apToSpend = Mathf.Min(CurrentActionPoints, cost);
+        if (apToSpend > 0)
+        {
+            SpendActionPoints(apToSpend);
+        }
+
         StartCoroutine(MoveCoroutine(target));
     }
     
@@ -199,6 +223,26 @@ public class BaseUnit : MonoBehaviour
                 BreakSustainedFire();
             }
         }
+
+        // Check for artifact pickup
+        var artifact = GridManager.Instance.GetArtifactOnTile(OccupiedTile);
+        if (artifact != null)
+        {
+            artifact.Pickup(this);
+        }
+
+        // Check if hero reached target tile
+        if (this is BaseHero && OccupiedTile is TargetTile)
+        {
+            GameManager.Instance.OnHeroReachedTarget(this);
+        }
+
+        // When a hero moves, check if any blips are now revealed
+        if (this is BaseHero)
+        {
+            Debug.Log($"[Hero Move] {UnitName} finished moving - checking blips for reveal");
+            UnitManager.Instance.CheckAllBlipsForReveal();
+        }
     }
 
     #endregion
@@ -208,6 +252,9 @@ public class BaseUnit : MonoBehaviour
     public void SpendActionPoints(int amount)
     {
         CurrentActionPoints = Mathf.Max(CurrentActionPoints - amount, 0);
+
+        // Refresh UI to show updated stats
+        InGameUIManager.Instance?.RefreshUnitInfo(this);
     }
 
     public bool CanPay(int cost) => CurrentActionPoints >= cost;
@@ -223,6 +270,12 @@ public class BaseUnit : MonoBehaviour
 
         CurrentHP -= amount;
         CurrentHP = Mathf.Max(CurrentHP, 0);
+
+        // Refresh UI to show updated stats
+        if (InGameUIManager.Instance != null)
+        {
+            InGameUIManager.Instance.RefreshUnitInfo(this);
+        }
 
         if (CurrentHP <= 0)
             Die(source);

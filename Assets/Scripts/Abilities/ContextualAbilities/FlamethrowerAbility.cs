@@ -6,7 +6,7 @@ public class FlamethrowerAbility : TargetedAbility
     public override string abilityName => "Flamethrower";
     public override int actionPointCost => 2;
 
-    [SerializeField] private int range = 3; // How many tiles forward
+    [SerializeField] private int range = 12; // How many tiles forward
     [SerializeField] private int maxCharges = 12;
     private int remainingCharges;
 
@@ -64,6 +64,9 @@ public class FlamethrowerAbility : TargetedAbility
         }
 
         Debug.Log($"{hero.UnitName} used Flamethrower! {flameTiles.Count} tiles set on fire. Charges remaining: {remainingCharges}/{maxCharges}");
+
+        // Log to combat debug
+        CombatDebugLog.LogFlamethrower(hero.UnitName, flameTiles.Count, remainingCharges, maxCharges);
     }
 
     private HashSet<Tile> GetFlameTiles(BaseHero hero)

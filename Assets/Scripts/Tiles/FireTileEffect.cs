@@ -34,13 +34,20 @@ public class FireTileEffect : MonoBehaviour
             {
                 // Roll 2+ dice (d6, success on 2-6)
                 int roll = Random.Range(1, 7);
+                int threshold = 2;
+                bool killed = roll >= threshold;
+
                 Debug.Log($"Fire roll for {unit.UnitName} at ({AffectedTile.X}, {AffectedTile.Y}): {roll}");
 
-                if (roll >= 2)
+                // Log to combat debug
+                CombatDebugLog.LogFireDamage(unit.UnitName, AffectedTile.X, AffectedTile.Y, roll, threshold, killed);
+
+                if (killed)
                 {
                     // Instant kill
                     unit.TakeDamage(9999, null);
                     Debug.Log($"{unit.UnitName} killed by fire!");
+                    CombatDebugLog.LogKill(unit.UnitName, "Fire");
                 }
                 else
                 {

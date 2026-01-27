@@ -106,11 +106,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Enemy1
   UnitName: Ghoul
   OccupiedTile: {fileID: 0}
-  Faction: 0
-  maxHP: 10
+  Faction: 1
+  maxHP: 2
   unitAbilities: []
   movementProfile:
-    allowSideways: 0
+    allowSideways: 1
     forwardCost: 1
     backwardCost: 2
   moveSpeed: 5

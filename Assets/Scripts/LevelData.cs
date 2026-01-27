@@ -12,7 +12,19 @@ public class LevelData : ScriptableObject
     public int levelNumber = 1;
 
     [Header("Grid Layout")]
-    [Tooltip("Each string represents one row. Use '.' for walkable, '#' for void.\nExample:\n\"####....####\"\n\"#..........#\"\n\"####....####\"")]
+    [Tooltip("Each string represents one row.\n" +
+             "Characters:\n" +
+             "  '.' = walkable\n" +
+             "  '#' = wall (blocks LOS)\n" +
+             "  ' ' = void (empty space)\n" +
+             "  '1'-'5' = hero spawn (specific hero)\n" +
+             "  'B' = blip spawn point\n" +
+             "  'A' = artifact pickup\n" +
+             "  'T' = target area\n" +
+             "Example:\n" +
+             "\"##1.2.3.4.5##\"\n" +
+             "\"#....A......#\"\n" +
+             "\"#.....T..BBB#\"")]
     [TextArea(5, 15)]
     public string[] gridRows;
 
@@ -20,22 +32,27 @@ public class LevelData : ScriptableObject
     [Tooltip("Character representing walkable tiles in gridRows")]
     public char walkableChar = '.';
 
-    [Tooltip("Character representing void/obstacle tiles in gridRows")]
-    public char voidChar = '#';
+    [Tooltip("Character representing wall tiles (blocks line of sight)")]
+    public char wallChar = '#';
 
-    [Header("Unit Spawning")]
-    [Tooltip("Possible spawn positions for heroes (X, Y coordinates)")]
-    public Vector2Int[] heroSpawnPoints;
+    [Tooltip("Character representing void/empty space")]
+    public char voidChar = ' ';
 
-    [Tooltip("Possible spawn positions for enemies (X, Y coordinates)")]
-    public Vector2Int[] enemySpawnPoints;
+    [Tooltip("Characters '1'-'5' represent hero spawn points for heroes 1-5")]
+    public char heroSpawnStart = '1';
 
-    [Header("Unit Counts")]
-    [Tooltip("Number of heroes to spawn for this level")]
-    public int heroCount = 1;
+    [Tooltip("Character representing blip/enemy spawn points (AI controlled)")]
+    public char blipSpawnChar = 'B';
 
-    [Tooltip("Number of enemies to spawn for this level")]
-    public int enemyCount = 1;
+    [Tooltip("Character representing artifact spawn location (artifact object placed on walkable tile)")]
+    public char artifactChar = 'A';
+
+    [Tooltip("Character representing target area tiles")]
+    public char targetChar = 'T';
+
+    [Header("Victory Conditions")]
+    [Tooltip("If true, a hero must carry the artifact to the target. If false, just reaching the target is enough.")]
+    public bool requiresArtifact = false;
 
     // Computed properties
     public int Width => gridRows != null && gridRows.Length > 0 ? gridRows[0].Length : 0;
@@ -58,10 +75,45 @@ public class LevelData : ScriptableObject
 
     /// <summary>
     /// Checks if the tile at given coordinates should be walkable.
+    /// Hero spawns, artifacts, and targets are walkable. Blip spawns are not walkable by heroes.
     /// </summary>
     public bool IsWalkable(int x, int y)
     {
-        return GetTileChar(x, y) == walkableChar;
+        char c = GetTileChar(x, y);
+        if (c == walkableChar) return true;
+        if (c >= heroSpawnStart && c <= '5') return true; // Hero spawn tiles are walkable
+        if (c == artifactChar) return true;
+        if (c == targetChar) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Returns the tile type for the given coordinates.
+    /// </summary>
+    public TileType GetTileType(int x, int y)
+    {
+        char c = GetTileChar(x, y);
+
+        if (c == walkableChar) return TileType.Walkable;
+        if (c == wallChar) return TileType.Wall;
+        if (c == voidChar) return TileType.Void;
+        if (c >= heroSpawnStart && c <= '5') return TileType.HeroSpawn;
+        if (c == blipSpawnChar) return TileType.BlipSpawn;
+        if (c == artifactChar) return TileType.ArtifactSpawn;
+        if (c == targetChar) return TileType.Target;
+
+        return TileType.Void; // Default unknown chars to void
+    }
+
+    /// <summary>
+    /// Gets the hero index (1-5) for a hero spawn tile, or 0 if not a hero spawn.
+    /// </summary>
+    public int GetHeroSpawnIndex(int x, int y)
+    {
+        char c = GetTileChar(x, y);
+        if (c >= heroSpawnStart && c <= '5')
+            return c - heroSpawnStart + 1;
+        return 0;
     }
 
     /// <summary>
@@ -82,16 +134,6 @@ public class LevelData : ScriptableObject
             {
                 Debug.LogWarning($"LevelData '{name}': Row {i} has different length ({gridRows[i].Length}) than row 0 ({firstRowLength})");
             }
-        }
-
-        if (heroSpawnPoints == null || heroSpawnPoints.Length == 0)
-        {
-            Debug.LogWarning($"LevelData '{name}': No hero spawn points defined!");
-        }
-
-        if (enemySpawnPoints == null || enemySpawnPoints.Length == 0)
-        {
-            Debug.LogWarning($"LevelData '{name}': No enemy spawn points defined!");
         }
 
         return true;

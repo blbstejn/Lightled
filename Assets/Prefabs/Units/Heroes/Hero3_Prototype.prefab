@@ -104,7 +104,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3c4d5e6f7890123456789abcdef0203, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero3
-  UnitName: Tank
+  UnitName: Flammenwerferbert
   OccupiedTile: {fileID: 0}
   Faction: 0
   maxHP: 10

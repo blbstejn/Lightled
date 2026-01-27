@@ -30,8 +30,6 @@ public class Hero1 : BaseHero
         var turnRight = ScriptableObject.CreateInstance<TurnRightAbility>();
         abilities.Add(turnRight);
 
-        // Set abilities using reflection to access private field
-        var field = typeof(BaseUnit).GetField("_abilities", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        field.SetValue(this, abilities);
+        unitAbilities = abilities;
     }
 }

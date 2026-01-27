@@ -104,7 +104,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f13d8d156816dea4eaa9bec4e2ed4a0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero1
-  UnitName: Hero
+  UnitName: Herbert
   OccupiedTile: {fileID: 0}
   Faction: 0
   maxHP: 10

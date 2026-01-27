@@ -16,7 +16,7 @@ MonoBehaviour:
   levelNumber: 4
   gridRows:
   - '################'
-  - '#..#........#..#'
+  - '#..#.12345..#..#'
   - '#..#.######.#..#'
   - '#..#.#....#.#..#'
   - '#....#.##.#....#'
@@ -25,13 +25,19 @@ MonoBehaviour:
   - '#.####.##.####.#'
   - '#.#....##....#.#'
   - '#.#.########.#.#'
-  - '#............#.#'
-  - '################'
+  - '#......T.....#.#'
+  - '#B############B#'
   walkableChar: 46
+  wallChar: 35
   voidChar: 35
-  heroSpawnPoints:
-  - {x: 1, y: 1}
+  heroSpawnStart: 49
+  blipSpawnChar: 66
+  artifactChar: 65
+  targetChar: 84
+  heroSpawnPoints: []
   enemySpawnPoints:
   - {x: 14, y: 10}
+  - {x: 1, y: 10}
   heroCount: 5
-  enemyCount: 1
+  enemyCount: 2
+  requiresArtifact: 0
