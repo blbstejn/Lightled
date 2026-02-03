@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Manages the in-game UI including hero stats display and ability buttons.
-/// Shows HP, AP, and non-contextual abilities for the selected hero.
+/// Shows AP and non-contextual abilities for the selected hero.
 /// Also handles victory and defeat screens.
 /// </summary>
 public class InGameUIManager : MonoBehaviour
@@ -16,7 +16,6 @@ public class InGameUIManager : MonoBehaviour
     [Header("Hero Stats Display")]
     [SerializeField] private GameObject heroStatsPanel;
     [SerializeField] private TextMeshProUGUI heroNameText;
-    [SerializeField] private TextMeshProUGUI heroHPText;
     [SerializeField] private TextMeshProUGUI heroAPText;
     [SerializeField] private TextMeshProUGUI heroFacingText;
 
@@ -37,13 +36,17 @@ public class InGameUIManager : MonoBehaviour
     [Header("Unit Tooltip (Optional - auto-generated if null)")]
     [SerializeField] private GameObject tooltipPanel;
     [SerializeField] private TextMeshProUGUI tooltipNameText;
-    [SerializeField] private TextMeshProUGUI tooltipHPText;
     [SerializeField] private TextMeshProUGUI tooltipAPText;
+
+    [Header("Turn Timer (Optional - auto-generated if null)")]
+    [SerializeField] private GameObject timerBarPanel; // Root panel containing the fill + text
+    [SerializeField] private Image timerFillImage; // Child image used as fill bar
+    [SerializeField] private TextMeshProUGUI timerTextField; // Child text showing mm:ss
+    [SerializeField] private float turnDuration = 180f; // 3 minutes
 
     private BaseHero _currentHero;
     private GameObject _tooltipPanel;
     private TextMeshProUGUI _tooltipNameText;
-    private TextMeshProUGUI _tooltipHPText;
     private TextMeshProUGUI _tooltipAPText;
     private BaseUnit _tooltipTarget;
     private List<Button> _abilityButtons = new List<Button>();
@@ -52,6 +55,13 @@ public class InGameUIManager : MonoBehaviour
     private GameObject _turnControlsPanel;
     private GameObject _victoryPanel;
     private GameObject _defeatPanel;
+
+    // Timer bar
+    private GameObject _timerBarPanel;
+    private Image _timerFillImage;
+    private TextMeshProUGUI _timerText;
+    private float _turnTimeRemaining;
+    private bool _isTimerActive;
 
     void Awake()
     {
@@ -72,6 +82,9 @@ public class InGameUIManager : MonoBehaviour
         // Setup End Turn button
         SetupEndTurnButton();
 
+        // Setup turn timer bar
+        SetupTimerBar();
+
         // Setup tooltip
         SetupTooltip();
     }
@@ -86,6 +99,9 @@ public class InGameUIManager : MonoBehaviour
 
         // Update command points display
         UpdateCommandPointsDisplay();
+
+        // Update turn timer
+        UpdateTurnTimer();
     }
 
     /// <summary>
@@ -116,7 +132,7 @@ public class InGameUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Updates the hero's HP and AP display.
+    /// Updates the hero's AP display.
     /// Call this whenever hero stats change.
     /// </summary>
     public void UpdateHeroStats()
@@ -127,12 +143,6 @@ public class InGameUIManager : MonoBehaviour
         if (heroNameText != null)
         {
             heroNameText.text = _currentHero.UnitName;
-        }
-
-        // Update HP
-        if (heroHPText != null)
-        {
-            heroHPText.text = $"HP: {_currentHero.CurrentHP}/{_currentHero.maxHP}";
         }
 
         // Update AP
@@ -588,6 +598,201 @@ public class InGameUIManager : MonoBehaviour
         GameManager.Instance.EndHeroTurn();
     }
 
+    #region Turn Timer
+
+    private static Sprite CreateWhiteSprite()
+    {
+        Texture2D tex = new Texture2D(1, 1);
+        tex.SetPixel(0, 0, Color.white);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
+    }
+
+    private void SetupTimerBar()
+    {
+        // Use assigned references if provided, otherwise create programmatically
+        if (timerBarPanel != null)
+        {
+            _timerBarPanel = timerBarPanel;
+            _timerFillImage = timerFillImage;
+            _timerText = timerTextField;
+        }
+        else
+        {
+            CreateTimerBarProgrammatically();
+        }
+
+        // Ensure fill image has a sprite and is set to Filled mode
+        if (_timerFillImage != null)
+        {
+            if (_timerFillImage.sprite == null)
+            {
+                _timerFillImage.sprite = CreateWhiteSprite();
+            }
+            _timerFillImage.type = Image.Type.Filled;
+            _timerFillImage.fillMethod = Image.FillMethod.Horizontal;
+            _timerFillImage.fillOrigin = 0;
+            _timerFillImage.fillAmount = 1f;
+        }
+
+        // Hide timer bar initially (will show when hero turn starts)
+        if (_timerBarPanel != null)
+        {
+            _timerBarPanel.SetActive(false);
+        }
+    }
+
+    private void CreateTimerBarProgrammatically()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+        {
+            canvas = FindFirstObjectByType<Canvas>();
+        }
+        if (canvas == null)
+        {
+            Debug.LogWarning("InGameUIManager: No Canvas found. Cannot create timer bar.");
+            return;
+        }
+
+        // Create timer bar panel
+        GameObject panelObj = new GameObject("TurnTimerBar", typeof(RectTransform));
+        panelObj.transform.SetParent(canvas.transform, false);
+        _timerBarPanel = panelObj;
+
+        RectTransform panelRect = panelObj.GetComponent<RectTransform>();
+        // Anchor to bottom-right, positioned above the turn controls panel
+        panelRect.anchorMin = new Vector2(1, 0);
+        panelRect.anchorMax = new Vector2(1, 0);
+        panelRect.pivot = new Vector2(1, 0);
+        panelRect.anchoredPosition = new Vector2(-20, 130); // Above turn controls
+        panelRect.sizeDelta = new Vector2(250, 24);
+
+        // Background bar
+        Image bgImage = panelObj.AddComponent<Image>();
+        bgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+
+        // Create fill bar
+        GameObject fillObj = new GameObject("TimerFill", typeof(RectTransform));
+        fillObj.transform.SetParent(panelObj.transform, false);
+
+        RectTransform fillRect = fillObj.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.sizeDelta = Vector2.zero;
+        fillRect.offsetMin = new Vector2(2, 2);
+        fillRect.offsetMax = new Vector2(-2, -2);
+
+        _timerFillImage = fillObj.AddComponent<Image>();
+        _timerFillImage.color = new Color(0.2f, 0.8f, 0.2f, 1f); // Green
+
+        // Create timer text overlay
+        GameObject textObj = new GameObject("TimerText", typeof(RectTransform));
+        textObj.transform.SetParent(panelObj.transform, false);
+
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
+
+        _timerText = textObj.AddComponent<TextMeshProUGUI>();
+        _timerText.fontSize = 14;
+        _timerText.color = Color.white;
+        _timerText.alignment = TextAlignmentOptions.Center;
+        _timerText.text = "3:00";
+    }
+
+    public void StartTurnTimer()
+    {
+        _turnTimeRemaining = turnDuration;
+        _isTimerActive = true;
+
+        // Show timer bar
+        if (_timerBarPanel != null)
+        {
+            _timerBarPanel.SetActive(true);
+        }
+
+        // Show turn controls panel
+        if (_turnControlsPanel != null)
+        {
+            _turnControlsPanel.SetActive(true);
+        }
+
+        UpdateTimerDisplay();
+    }
+
+    public void StopTurnTimer()
+    {
+        _isTimerActive = false;
+
+        // Hide timer bar
+        if (_timerBarPanel != null)
+        {
+            _timerBarPanel.SetActive(false);
+        }
+
+        // Hide turn controls panel (end turn + CP hidden during AI turn)
+        if (_turnControlsPanel != null)
+        {
+            _turnControlsPanel.SetActive(false);
+        }
+    }
+
+    private void UpdateTurnTimer()
+    {
+        if (!_isTimerActive) return;
+
+        _turnTimeRemaining -= Time.deltaTime;
+
+        if (_turnTimeRemaining <= 0f)
+        {
+            _turnTimeRemaining = 0f;
+            _isTimerActive = false;
+            UpdateTimerDisplay();
+            GameManager.Instance.EndHeroTurn();
+            return;
+        }
+
+        UpdateTimerDisplay();
+    }
+
+    private void UpdateTimerDisplay()
+    {
+        if (_timerFillImage == null) return;
+
+        float ratio = _turnTimeRemaining / turnDuration;
+        _timerFillImage.fillAmount = ratio;
+
+        // Color transitions: green > yellow > red
+        if (ratio > 0.5f)
+        {
+            _timerFillImage.color = new Color(0.2f, 0.8f, 0.2f, 1f); // Green
+        }
+        else if (ratio > 0.25f)
+        {
+            _timerFillImage.color = new Color(0.9f, 0.8f, 0.1f, 1f); // Yellow
+        }
+        else
+        {
+            _timerFillImage.color = new Color(0.9f, 0.2f, 0.1f, 1f); // Red
+        }
+
+        if (_timerText != null)
+        {
+            bool debugVisible = CombatDebugUI.Instance != null && CombatDebugUI.Instance.IsVisible;
+            _timerText.enabled = debugVisible;
+            if (debugVisible)
+            {
+                int minutes = Mathf.FloorToInt(_turnTimeRemaining / 60f);
+                int seconds = Mathf.FloorToInt(_turnTimeRemaining % 60f);
+                _timerText.text = $"{minutes}:{seconds:00}";
+            }
+        }
+    }
+
+    #endregion
+
     #region Unit Tooltip
 
     /// <summary>
@@ -599,7 +804,6 @@ public class InGameUIManager : MonoBehaviour
         {
             _tooltipPanel = tooltipPanel;
             _tooltipNameText = tooltipNameText;
-            _tooltipHPText = tooltipHPText;
             _tooltipAPText = tooltipAPText;
             _tooltipPanel.SetActive(false);
         }
@@ -659,14 +863,6 @@ public class InGameUIManager : MonoBehaviour
         _tooltipNameText.fontStyle = FontStyles.Bold;
         _tooltipNameText.color = Color.white;
 
-        // Create HP text
-        GameObject hpObj = new GameObject("HPText", typeof(RectTransform));
-        hpObj.transform.SetParent(panelObj.transform, false);
-        hpObj.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 18);
-        _tooltipHPText = hpObj.AddComponent<TextMeshProUGUI>();
-        _tooltipHPText.fontSize = 14;
-        _tooltipHPText.color = new Color(0.9f, 0.3f, 0.3f, 1f); // Red-ish for HP
-
         // Create AP text
         GameObject apObj = new GameObject("APText", typeof(RectTransform));
         apObj.transform.SetParent(panelObj.transform, false);
@@ -691,9 +887,6 @@ public class InGameUIManager : MonoBehaviour
         // Update tooltip content
         if (_tooltipNameText != null)
             _tooltipNameText.text = unit.UnitName;
-
-        if (_tooltipHPText != null)
-            _tooltipHPText.text = $"HP: {unit.CurrentHP}/{unit.maxHP}";
 
         if (_tooltipAPText != null)
             _tooltipAPText.text = $"AP: {unit.CurrentActionPoints}/{unit.MaxActionPoints}";
@@ -834,6 +1027,7 @@ public class InGameUIManager : MonoBehaviour
     private void HideGameplayUI()
     {
         HideHeroUI();
+        StopTurnTimer();
 
         if (_turnControlsPanel != null)
         {

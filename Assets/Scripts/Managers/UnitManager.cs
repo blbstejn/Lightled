@@ -284,6 +284,9 @@ public class UnitManager : MonoBehaviour
         _spawnedHeroes.Remove(hero);
         if (SelectedHero == hero)
             SelectedHero = null;
+
+        // Notify the director AI that a hero was lost
+        DirectorAI.Instance?.RegisterHeroDeath();
     }
 
     private T GetRandomUnit<T>(Faction faction) where T : BaseUnit

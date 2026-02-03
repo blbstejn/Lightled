@@ -29,6 +29,7 @@ public class CombatDebugUI : MonoBehaviour
     [SerializeField] private GameObject entryPrefab;
 
     private bool _isVisible;
+    public bool IsVisible => _isVisible;
     private List<GameObject> _entryObjects = new List<GameObject>();
     private Canvas _canvas;
     private GameObject _panel;

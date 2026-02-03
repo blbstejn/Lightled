@@ -27,9 +27,8 @@ public class BaseUnit : MonoBehaviour
     public Faction Faction;
 
     [Header("Health")]
-    public int maxHP = 10;
-    public int CurrentHP { get; private set; }
-    public bool IsAlive => CurrentHP > 0;
+    private bool _isAlive = true;
+    public bool IsAlive => _isAlive;
 
     /// <summary>
     /// Whether this unit can be targeted by attacks.
@@ -64,7 +63,7 @@ public class BaseUnit : MonoBehaviour
 
     public virtual void Awake()
     {
-        CurrentHP = maxHP;
+        _isAlive = true;
         CurrentActionPoints = MaxActionPoints;
 
         // Disable collider so raycasts pass through to tiles
@@ -261,6 +260,11 @@ public class BaseUnit : MonoBehaviour
     
     #region AbilitiesAndAP
 
+    public void SetActionPoints(int amount)
+    {
+        CurrentActionPoints = Mathf.Clamp(amount, 0, MaxActionPoints);
+    }
+
     public void SpendActionPoints(int amount)
     {
         CurrentActionPoints = Mathf.Max(CurrentActionPoints - amount, 0);
@@ -275,22 +279,16 @@ public class BaseUnit : MonoBehaviour
     
     #region Damage
 
-    public virtual void TakeDamage(int amount, BaseUnit source = null)
+    /// <summary>
+    /// Kills this unit instantly.
+    /// </summary>
+    public virtual void Kill(BaseUnit killer = null)
     {
         if (!IsAlive)
             return;
 
-        CurrentHP -= amount;
-        CurrentHP = Mathf.Max(CurrentHP, 0);
-
-        // Refresh UI to show updated stats
-        if (InGameUIManager.Instance != null)
-        {
-            InGameUIManager.Instance.RefreshUnitInfo(this);
-        }
-
-        if (CurrentHP <= 0)
-            Die(source);
+        _isAlive = false;
+        Die(killer);
     }
 
     #endregion

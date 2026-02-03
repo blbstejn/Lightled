@@ -7,6 +7,7 @@ public class Enemy2 : BaseEnemy
 {
     private bool _isRevealed = false;
     private Tile _spawnTile; // Track spawn tile - blips can't be revealed here, ghouls can't spawn here
+    private int _ghoulCount; // Determined at spawn time
 
     [SerializeField] private Enemy1 ghoulPrefab;
     [SerializeField] private int minGhouls = 1;
@@ -27,6 +28,10 @@ public class Enemy2 : BaseEnemy
             _spawnTile = OccupiedTile;
             Debug.Log($"[Blip] {UnitName} spawn tile set to ({_spawnTile.X}, {_spawnTile.Y})");
         }
+
+        // Determine ghoul count at spawn time
+        _ghoulCount = Random.Range(minGhouls, maxGhouls + 1);
+        Debug.Log($"[Blip] {UnitName} will spawn {_ghoulCount} ghouls when revealed");
     }
 
     private void SetupAbilities()
@@ -149,9 +154,10 @@ public class Enemy2 : BaseEnemy
             Debug.Log($"[Blip Reveal] Ghouls will target {preferredTarget.UnitName}");
         }
 
-        // Determine how many ghouls to spawn
-        int ghoulCount = Random.Range(minGhouls, maxGhouls + 1);
-        Debug.Log($"[Blip Reveal] Will spawn {ghoulCount} ghouls (range: {minGhouls}-{maxGhouls})");
+        Debug.Log($"[Blip Reveal] Will spawn {_ghoulCount} ghouls (determined at spawn time)");
+
+        // Ghouls inherit the blip's remaining action points
+        int blipAP = CurrentActionPoints;
 
         // Save the blip's tile and clear it BEFORE spawning ghouls
         Tile blipTile = OccupiedTile;
@@ -172,14 +178,15 @@ public class Enemy2 : BaseEnemy
         if (firstGhoul != null)
         {
             firstGhoul.PreferredTarget = preferredTarget;
+            firstGhoul.SetActionPoints(blipAP);
             blipTile.SetUnit(firstGhoul);
             UnitManager.Instance.RegisterEnemy(firstGhoul);
             spawned++;
-            Debug.Log($"[Blip Reveal] First ghoul spawned on blip's tile ({blipTile.X},{blipTile.Y})");
+            Debug.Log($"[Blip Reveal] First ghoul spawned on blip's tile ({blipTile.X},{blipTile.Y}) with {blipAP} AP");
         }
 
         // Spawn remaining ghouls on neighbor tiles
-        int remainingGhouls = ghoulCount - 1;
+        int remainingGhouls = _ghoulCount - 1;
         for (int i = 0; i < remainingGhouls && i < neighbourTiles.Count; i++)
         {
             Tile tile = neighbourTiles[i];
@@ -188,10 +195,11 @@ public class Enemy2 : BaseEnemy
             if (ghoul != null)
             {
                 ghoul.PreferredTarget = preferredTarget;
+                ghoul.SetActionPoints(blipAP);
                 tile.SetUnit(ghoul);
                 UnitManager.Instance.RegisterEnemy(ghoul);
                 spawned++;
-                Debug.Log($"[Blip Reveal] Ghoul spawned successfully at ({tile.X},{tile.Y})");
+                Debug.Log($"[Blip Reveal] Ghoul spawned successfully at ({tile.X},{tile.Y}) with {blipAP} AP");
             }
             else
             {

@@ -101,8 +101,8 @@ public class MeleeAttackAbility : TargetedAbility
         {
             // Attacker wins - defender dies
             Debug.Log($"[MeleeAttack] {attacker.UnitName} WINS! {defender.UnitName} is killed!");
-            defender.TakeDamage(9999, attacker);
             CombatDebugLog.LogKill(defender.UnitName, attacker.UnitName);
+            defender.Kill(attacker);
         }
         else if (defenderBest > attackerBest)
         {
@@ -113,8 +113,8 @@ public class MeleeAttackAbility : TargetedAbility
             {
                 // Defender is facing attacker - attacker dies
                 Debug.Log($"[MeleeAttack] {defender.UnitName} WINS and is facing attacker! {attacker.UnitName} is killed!");
-                attacker.TakeDamage(9999, defender);
                 CombatDebugLog.LogKill(attacker.UnitName, defender.UnitName);
+                attacker.Kill(defender);
             }
             else
             {
@@ -128,6 +128,9 @@ public class MeleeAttackAbility : TargetedAbility
             // Tie - nothing happens
             Debug.Log($"[MeleeAttack] TIE! Both rolled {attackerBest}. No effect.");
         }
+
+        // Notify the director AI that combat occurred
+        DirectorAI.Instance?.RegisterCombatEvent();
     }
 
     private int GetDiceCount(BaseUnit unit)

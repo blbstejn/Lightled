@@ -80,34 +80,36 @@ public class FlamethrowerAbility : TargetedAbility
                 if (isKilled)
                 {
                     killed++;
+                    CombatDebugLog.LogKill(targetUnit.UnitName, $"{hero.UnitName} (Flamethrower)");
 
                     // Blips are killed without spawning ghouls
                     if (targetUnit is Enemy2 blip)
                     {
                         blip.KillByFire();
-                        CombatDebugLog.LogKill(targetUnit.UnitName, $"{hero.UnitName} (Flamethrower)");
                     }
                     else
                     {
-                        targetUnit.TakeDamage(9999, hero);
-                        CombatDebugLog.LogKill(targetUnit.UnitName, $"{hero.UnitName} (Flamethrower)");
+                        targetUnit.Kill(hero);
                     }
                 }
             }
         }
 
-        // Spawn fire on all affected tiles (blocks LOS, movement, damages adjacent units)
-        // Skip immediate damage roll since we already did it above
-        foreach (Tile tile in affectedTiles)
+        // Create permanent fire on center tile only (blocks LOS and movement)
+        if (FireEffectManager.Instance != null)
         {
-            if (FireEffectManager.Instance != null)
+            FireEffectManager.Instance.CreateFireEffect(target, rollDamageImmediately: false);
+
+            // Create brief fire flash on all neighbor tiles to show damage area
+            var neighbors = GridManager.Instance.GetNeighbours(target);
+            foreach (Tile neighbor in neighbors)
             {
-                FireEffectManager.Instance.CreateFireEffect(tile, rollDamageImmediately: false);
+                FireEffectManager.Instance.CreateFireFlash(neighbor);
             }
         }
 
         CombatDebugLog.LogFlamethrower(hero.UnitName, affectedTiles.Count, remainingCharges, maxCharges);
-        Debug.Log($"[Flamethrower] Attack complete. Killed {killed} units. Fire spawned on {affectedTiles.Count} tiles.");
+        Debug.Log($"[Flamethrower] Attack complete. Killed {killed} units. Permanent fire on center, flash on {affectedTiles.Count - 1} neighbors.");
     }
 
     private HashSet<Tile> GetAffectedTiles(Tile center)

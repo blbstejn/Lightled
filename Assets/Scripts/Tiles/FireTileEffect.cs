@@ -42,8 +42,7 @@ public class FireTileEffect : MonoBehaviour
 
                 if (killed)
                 {
-                    // Instant kill
-                    unit.TakeDamage(9999, null);
+                    unit.Kill();
                     Debug.Log($"{unit.UnitName} killed by fire!");
                     CombatDebugLog.LogKill(unit.UnitName, "Fire");
                 }

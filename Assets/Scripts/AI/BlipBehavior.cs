@@ -43,14 +43,17 @@ public class BlipBehavior : EnemyBehavior
 
         bool isCurrentlyVisible = heroLOS.Contains(enemy.OccupiedTile);
         bool isAdjacentToHero = PathfindingUtils.IsAdjacentToAnyHero(enemy);
+        int distanceToTarget = PathfindingUtils.ManhattanDistance(enemy.OccupiedTile, target.OccupiedTile);
+        bool heroFacingUs = PathfindingUtils.IsHeroFacingToward(target, enemy.OccupiedTile);
 
         AIDebugLog.LogLOSCheck(enemy.UnitName, isCurrentlyVisible, heroLOS.Count);
 
-        // Priority 1: AMBUSH - If adjacent to a hero AND not visible -> REVEAL!
-        if (isAdjacentToHero && !isCurrentlyVisible)
+        // Priority 1: AMBUSH - If adjacent to a hero -> REVEAL
+        // Reveal regardless of visibility - if we're next to them, commit to the attack
+        if (isAdjacentToHero)
         {
             Debug.Log($"[AI] {enemy.UnitName}: AMBUSH! Revealing next to hero!");
-            AIDebugLog.LogDecision(enemy.UnitName, "REVEAL", "Adjacent to hero while hidden - AMBUSH!");
+            AIDebugLog.LogDecision(enemy.UnitName, "REVEAL", "Adjacent to hero - AMBUSH!");
             return AIAction.RevealBlip();
         }
 
@@ -83,20 +86,26 @@ public class BlipBehavior : EnemyBehavior
             return AIAction.Wait();
         }
 
-        // Priority 3: Move closer to heroes while staying hidden
-        int distanceToTarget = PathfindingUtils.ManhattanDistance(enemy.OccupiedTile, target.OccupiedTile);
+        // --- From here on, the blip is hidden ---
+
         AIDebugLog.LogPathfinding(enemy.UnitName, target.UnitName, distanceToTarget, distanceToTarget, true);
 
-        // If we're at a good ambush distance, wait for opportunity
-        if (distanceToTarget <= idealAmbushDistance)
+        // Priority 3: Close range and hero's back is turned -> charge in aggressively
+        // Move toward hero even through LOS tiles - they're not looking
+        if (distanceToTarget <= idealAmbushDistance && !heroFacingUs)
         {
-            Debug.Log($"[AI] {enemy.UnitName}: In ambush position ({distanceToTarget} tiles from hero), waiting.");
-            AIDebugLog.LogDecision(enemy.UnitName, "HOLD", $"In ambush position ({distanceToTarget} tiles)");
-            AIDebugLog.LogWait(enemy.UnitName, $"Holding ambush position at distance {distanceToTarget}");
-            return AIAction.Wait();
+            Tile aggressiveMove = PathfindingUtils.FindBestMoveToward(enemy, target.OccupiedTile);
+            if (aggressiveMove != null && enemy.GetMoveCost(aggressiveMove) <= enemy.CurrentActionPoints)
+            {
+                Debug.Log($"[AI] {enemy.UnitName}: Hero's back is turned - charging in!");
+                int moveCost = enemy.GetMoveCost(aggressiveMove);
+                AIDebugLog.LogDecision(enemy.UnitName, "CHARGE", $"Hero not facing us at distance {distanceToTarget} - closing in aggressively");
+                AIDebugLog.LogMove(enemy.UnitName, enemy.OccupiedTile.X, enemy.OccupiedTile.Y, aggressiveMove.X, aggressiveMove.Y, moveCost, $"Charge toward {target.UnitName}");
+                return AIAction.MoveTo(aggressiveMove);
+            }
         }
 
-        // Try to move closer while staying hidden
+        // Priority 4: Sneak closer while staying hidden
         Tile bestMove = PathfindingUtils.FindBestSafeMoveToward(enemy, target.OccupiedTile, heroLOS);
         if (bestMove != null && enemy.GetMoveCost(bestMove) <= enemy.CurrentActionPoints)
         {
@@ -107,13 +116,26 @@ public class BlipBehavior : EnemyBehavior
             return AIAction.MoveTo(bestMove);
         }
 
-        // No safe moves toward target - try any safe move
+        // Priority 5: No safe path but hero isn't looking -> take a risk and move through LOS
+        if (!heroFacingUs)
+        {
+            Tile riskyMove = PathfindingUtils.FindBestMoveToward(enemy, target.OccupiedTile);
+            if (riskyMove != null && enemy.GetMoveCost(riskyMove) <= enemy.CurrentActionPoints)
+            {
+                Debug.Log($"[AI] {enemy.UnitName}: No safe path, but hero not looking - taking a risk.");
+                int moveCost = enemy.GetMoveCost(riskyMove);
+                AIDebugLog.LogDecision(enemy.UnitName, "RISK_MOVE", "No safe path but hero not facing us - moving through LOS");
+                AIDebugLog.LogMove(enemy.UnitName, enemy.OccupiedTile.X, enemy.OccupiedTile.Y, riskyMove.X, riskyMove.Y, moveCost, $"Risky move toward {target.UnitName}");
+                return AIAction.MoveTo(riskyMove);
+            }
+        }
+
+        // Priority 6: Try any safe reposition
         var anySafeMoves = PathfindingUtils.GetSafeMoves(enemy, heroLOS);
         AIDebugLog.LogAvailableMoves(enemy.UnitName, anySafeMoves.Count, anySafeMoves.Count);
 
         if (anySafeMoves.Count > 0)
         {
-            // Move randomly among safe tiles
             Tile randomSafe = anySafeMoves[Random.Range(0, anySafeMoves.Count)];
             if (enemy.GetMoveCost(randomSafe) <= enemy.CurrentActionPoints)
             {
@@ -126,8 +148,8 @@ public class BlipBehavior : EnemyBehavior
         }
 
         // No options - wait
-        Debug.Log($"[AI] {enemy.UnitName}: No safe moves available, waiting.");
-        AIDebugLog.LogWait(enemy.UnitName, "No safe moves available");
+        Debug.Log($"[AI] {enemy.UnitName}: No moves available, waiting.");
+        AIDebugLog.LogWait(enemy.UnitName, "No moves available");
         return AIAction.Wait();
     }
 }

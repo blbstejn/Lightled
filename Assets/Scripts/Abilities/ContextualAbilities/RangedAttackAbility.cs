@@ -127,21 +127,10 @@ public class RangedAttackAbility : TargetedAbility
 
         if (hit)
         {
-            targetUnit.TakeDamage(1, unit);
-            Debug.Log($"[RangedAttack] HIT! {targetUnit.UnitName} takes 1 damage");
-
-            // Only set sustained fire target if target survived
-            if (targetUnit != null && targetUnit.IsAlive)
-            {
-                unit.SetSustainedFireTarget(targetUnit);
-                Debug.Log($"[RangedAttack] Sustained fire target set to {targetUnit.UnitName}");
-            }
-            else
-            {
-                unit.BreakSustainedFire();
-                Debug.Log($"[RangedAttack] Target killed! Sustained fire cleared.");
-                CombatDebugLog.LogKill(targetUnit.UnitName, unit.UnitName);
-            }
+            Debug.Log($"[RangedAttack] HIT! {targetUnit.UnitName} is killed!");
+            CombatDebugLog.LogKill(targetUnit.UnitName, unit.UnitName);
+            targetUnit.Kill(unit);
+            unit.BreakSustainedFire();
         }
         else
         {

@@ -80,6 +80,12 @@ public class GameManager : MonoBehaviour
         // This catches blips that might be in LOS at game start or after enemy movement
         Debug.Log("[Game Start] Checking blips for reveal at turn start...");
         UnitManager.Instance.CheckAllBlipsForReveal();
+
+        // Start the turn timer
+        if (InGameUIManager.Instance != null)
+        {
+            InGameUIManager.Instance.StartTurnTimer();
+        }
     }
 
     /// <summary>
@@ -132,6 +138,12 @@ public class GameManager : MonoBehaviour
     {
         if (GameState != GameState.HeroesTurn)
             return;
+
+        // Stop the turn timer
+        if (InGameUIManager.Instance != null)
+        {
+            InGameUIManager.Instance.StopTurnTimer();
+        }
 
         // Deselect hero and clear highlights
         UnitManager.Instance.SetSelectedHero(null);

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,12 +7,53 @@ public class FireEffectManager : MonoBehaviour
     public static FireEffectManager Instance;
 
     [SerializeField] private Sprite fireSprite;
+    [SerializeField] private float flashDuration = 0.5f;
 
     private List<FireTileEffect> _activeFireEffects = new List<FireTileEffect>();
 
     void Awake()
     {
         Instance = this;
+    }
+
+    /// <summary>
+    /// Creates a brief fire flash effect on a tile (visual only, no lasting fire).
+    /// Used for flamethrower neighbor tiles to show damage area.
+    /// </summary>
+    public void CreateFireFlash(Tile tile, float duration = -1f)
+    {
+        if (tile == null || fireSprite == null)
+            return;
+
+        float actualDuration = duration > 0 ? duration : flashDuration;
+        StartCoroutine(FireFlashCoroutine(tile, actualDuration));
+    }
+
+    private IEnumerator FireFlashCoroutine(Tile tile, float duration)
+    {
+        // Create temporary fire visual
+        GameObject flashObj = new GameObject($"FireFlash_({tile.X},{tile.Y})");
+        flashObj.transform.SetParent(tile.transform);
+        flashObj.transform.localPosition = Vector3.zero;
+
+        SpriteRenderer renderer = flashObj.AddComponent<SpriteRenderer>();
+        renderer.sprite = fireSprite;
+        renderer.sortingOrder = 3; // Above regular fire
+        renderer.color = new Color(1f, 0.8f, 0.4f, 0.9f); // Bright flash color
+
+        // Fade out over duration
+        float elapsed = 0f;
+        Color startColor = renderer.color;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float alpha = Mathf.Lerp(startColor.a, 0f, elapsed / duration);
+            renderer.color = new Color(startColor.r, startColor.g, startColor.b, alpha);
+            yield return null;
+        }
+
+        Destroy(flashObj);
     }
 
     public void CreateFireEffect(Tile tile, bool rollDamageImmediately = true)
@@ -113,7 +155,7 @@ public class FireEffectManager : MonoBehaviour
             }
             else
             {
-                unit.TakeDamage(9999, null);
+                unit.Kill();
             }
             CombatDebugLog.LogKill(unit.UnitName, "Fire (adjacent)");
         }
