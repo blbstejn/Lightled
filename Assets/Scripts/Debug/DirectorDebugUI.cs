@@ -4,9 +4,9 @@ using UnityEngine.InputSystem;
 using TMPro;
 
 /// <summary>
-/// Toggleable debug overlay for the Director AI.
+/// Toggleable debug overlay for the Director AI pressure system.
 /// Press F3 to toggle visibility.
-/// Shows live tension score, director state, and per-factor breakdowns.
+/// Shows live pressure score, intervention state, and per-factor breakdowns.
 /// </summary>
 public class DirectorDebugUI : MonoBehaviour
 {
@@ -16,18 +16,19 @@ public class DirectorDebugUI : MonoBehaviour
     [SerializeField] private bool startVisible = false;
 
     [Header("Panel Settings")]
-    [SerializeField] private float panelWidth = 320f;
-    [SerializeField] private float panelHeight = 220f;
+    [SerializeField] private float panelWidth = 340f;
+    [SerializeField] private float panelHeight = 300f;
     [SerializeField] private int fontSize = 12;
 
     private bool _isVisible;
+    public bool IsVisible => _isVisible;
+
     private Canvas _canvas;
     private GameObject _panel;
     private TextMeshProUGUI _bodyText;
 
-    // Bar characters for visual tension display
-    private const char FilledChar = '\u2588'; // █
-    private const char EmptyChar = '\u2591';  // ░
+    private const char FilledChar = '\u2588';
+    private const char EmptyChar = '\u2591';
     private const int BarLength = 10;
 
     void Awake()
@@ -43,18 +44,12 @@ public class DirectorDebugUI : MonoBehaviour
 
     void Update()
     {
-        // Toggle visibility with F3
         var keyboard = Keyboard.current;
         if (keyboard != null && keyboard.f3Key.wasPressedThisFrame)
-        {
             Toggle();
-        }
 
-        // Update the display every frame if visible
         if (_isVisible && DirectorAI.Instance != null)
-        {
             UpdateDisplay();
-        }
     }
 
     public void Toggle()
@@ -74,59 +69,74 @@ public class DirectorDebugUI : MonoBehaviour
         if (_bodyText == null || DirectorAI.Instance == null)
             return;
 
-        var director = DirectorAI.Instance;
-        string stateColor = GetStateColor(director.CurrentState);
-        string stateName = director.CurrentState.ToString().ToUpper();
+        var d = DirectorAI.Instance;
 
-        string tensionBar = BuildBar(director.TensionScore);
+        string levelColor = GetLevelColor(d.CurrentPressureLevel);
+        string levelName = d.CurrentPressureLevel.ToString().ToUpper();
+
+        string aggroMod = d.GetAggressionModifier().ToString("F2");
+        string spawnBias = d.GetSpawnPositionBias().ToString("F0");
+        int meleeMod = d.GetMeleeDiceModifier();
+        int hitMod = d.GetHitThresholdModifier();
+        string meleeModStr = meleeMod == 0 ? "±0" : $"{meleeMod:+#;-#}";
+        string hitModStr = hitMod == 0 ? "±0" : $"{hitMod:+#;-#}";
+
+        string interventionLabel = d.CurrentPressureLevel switch
+        {
+            PressureLevel.Low => "<color=#FF9800>Escalating</color>",
+            PressureLevel.Moderate => "<color=#9E9E9E>Passive</color>",
+            PressureLevel.Elevated => "<color=#42A5F5>Stabilizing</color>",
+            PressureLevel.Critical => "<color=#2196F3>Restraining</color>",
+            _ => "---"
+        };
+
+        string pressureBar = BuildBar(d.PressureScore);
 
         _bodyText.text =
-            $"State:   <color={stateColor}>{stateName}</color>\n" +
-            $"Tension: {tensionBar} {director.TensionScore:F2}  <color=#888>(raw {director.RawTension:F2})</color>\n" +
+            $"<b>Pressure Measurement</b>\n" +
+            $"Level:    <color={levelColor}>{levelName}</color>\n" +
+            $"Pressure: {pressureBar} {d.PressureScore:F2}  <color=#888>(raw {d.RawPressure:F2})</color>\n" +
             $"\n" +
-            $"Proximity:      {director.ProximityScore:F2}  {BuildBar(director.ProximityScore)}\n" +
-            $"Outnumbered:    {director.OutnumberedScore:F2}  {BuildBar(director.OutnumberedScore)}\n" +
-            $"Hidden Threats: {director.HiddenThreatScore:F2}  {BuildBar(director.HiddenThreatScore)}\n" +
-            $"Hero Losses:    {director.HeroLossScore:F2}  {BuildBar(director.HeroLossScore)}\n" +
-            $"Resources:      {director.ResourceScore:F2}  {BuildBar(director.ResourceScore)}\n" +
-            $"Recent Combat:  {director.CombatScore:F2}  {BuildBar(director.CombatScore)}";
+            $"Proximity:      {d.ProximityScore:F2}  {BuildBar(d.ProximityScore)}\n" +
+            $"Outnumbered:    {d.OutnumberedScore:F2}  {BuildBar(d.OutnumberedScore)}\n" +
+            $"Hidden Threats: {d.HiddenThreatScore:F2}  {BuildBar(d.HiddenThreatScore)}\n" +
+            $"Hero Losses:    {d.HeroLossScore:F2}  {BuildBar(d.HeroLossScore)}\n" +
+            $"Combat:         {d.CombatScore:F2}  {BuildBar(d.CombatScore)}\n" +
+            $"Exposure:       {d.ExposureScore:F2}  {BuildBar(d.ExposureScore)}\n" +
+            $"\n" +
+            $"<b>Active Interventions</b>\n" +
+            $"Mode:       {interventionLabel}\n" +
+            $"Aggression: x{aggroMod}  Bias: {spawnBias}\n" +
+            $"Melee dice: {meleeModStr}  Hit threshold: {hitModStr}";
     }
 
-    /// <summary>
-    /// Builds a visual bar string from a 0-1 value.
-    /// Example: 0.7 -> "███████░░░"
-    /// </summary>
     private string BuildBar(float value)
     {
         int filled = Mathf.RoundToInt(value * BarLength);
         int empty = BarLength - filled;
 
-        string barColor = value < 0.3f ? "#4CAF50" :  // Green
-                          value < 0.6f ? "#FFC107" :  // Yellow
-                          value < 0.8f ? "#FF9800" :  // Orange
-                                         "#F44336";   // Red
+        string barColor = value < 0.3f ? "#4CAF50" :
+                          value < 0.6f ? "#FFC107" :
+                          value < 0.8f ? "#FF9800" :
+                                         "#F44336";
 
         return $"<color={barColor}>{new string(FilledChar, filled)}</color><color=#333>{new string(EmptyChar, empty)}</color>";
     }
 
-    /// <summary>
-    /// Returns the TMP color tag for a given director state.
-    /// </summary>
-    private string GetStateColor(DirectorState state)
+    private string GetLevelColor(PressureLevel level)
     {
-        return state switch
+        return level switch
         {
-            DirectorState.Calm => "#4CAF50",        // Green
-            DirectorState.Building => "#FFC107",     // Yellow
-            DirectorState.Escalating => "#FF9800",   // Orange
-            DirectorState.Critical => "#F44336",     // Red
+            PressureLevel.Low => "#4CAF50",
+            PressureLevel.Moderate => "#FFC107",
+            PressureLevel.Elevated => "#FF9800",
+            PressureLevel.Critical => "#F44336",
             _ => "#FFFFFF"
         };
     }
 
     private void CreateUIProgrammatically()
     {
-        // Find or create canvas
         _canvas = GetComponentInParent<Canvas>();
         if (_canvas == null)
             _canvas = FindFirstObjectByType<Canvas>();
@@ -140,8 +150,6 @@ public class DirectorDebugUI : MonoBehaviour
             canvasObj.AddComponent<GraphicRaycaster>();
         }
 
-        // Create main panel — anchored to bottom-left to avoid overlap with
-        // CombatDebugUI (top-left, F1) and AIDebugUI (top-right, F2)
         _panel = new GameObject("DirectorDebugPanel", typeof(RectTransform));
         _panel.transform.SetParent(_canvas.transform, false);
 
@@ -152,14 +160,11 @@ public class DirectorDebugUI : MonoBehaviour
         panelRect.anchoredPosition = new Vector2(10, 10);
         panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
 
-        // Background
         Image panelBg = _panel.AddComponent<Image>();
         panelBg.color = new Color(0.05f, 0.08f, 0.05f, 0.85f);
 
-        // Draggable
         _panel.AddComponent<DraggableResizablePanel>();
 
-        // Header
         GameObject header = new GameObject("Header", typeof(RectTransform));
         header.transform.SetParent(_panel.transform, false);
 
@@ -173,7 +178,6 @@ public class DirectorDebugUI : MonoBehaviour
         Image headerBg = header.AddComponent<Image>();
         headerBg.color = new Color(0.15f, 0.2f, 0.15f, 1f);
 
-        // Header title
         GameObject titleObj = new GameObject("Title", typeof(RectTransform));
         titleObj.transform.SetParent(header.transform, false);
 
@@ -185,12 +189,11 @@ public class DirectorDebugUI : MonoBehaviour
         titleRect.offsetMax = new Vector2(-8, 0);
 
         TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "Director AI (Press F3 to toggle)";
+        titleText.text = "Director AI (F3)";
         titleText.fontSize = 12;
         titleText.color = Color.white;
         titleText.alignment = TextAlignmentOptions.MidlineLeft;
 
-        // Body text — single TextMeshProUGUI that gets updated every frame
         GameObject bodyObj = new GameObject("Body", typeof(RectTransform));
         bodyObj.transform.SetParent(_panel.transform, false);
 

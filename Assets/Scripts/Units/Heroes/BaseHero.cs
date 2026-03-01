@@ -8,6 +8,10 @@ public class BaseHero : BaseUnit
     [Header("FieldOfView")]
     [SerializeField] private int shootConeWidth = 1;
 
+    [Header("Overwatch")]
+    public bool IsOnOverwatch { get; private set; }
+    public HashSet<Tile> OverwatchLOSTiles { get; private set; }
+
     public override void Awake()
     {
         MaxActionPoints = 4; // Heroes have 4 AP
@@ -22,24 +26,44 @@ public class BaseHero : BaseUnit
         }
 
         base.Awake();
+    }
 
-        // Add turn abilities if not already present
+    protected virtual void Start()
+    {
+        // Runs in Start so subclass Awake/SetupAbilities finishes first.
+        // Previously ran in Awake, but subclasses replace unitAbilities after
+        // base.Awake(), which wiped out the Overwatch ability.
         EnsureTurnAbilities();
     }
 
+    public override void StartNewTurn()
+    {
+        base.StartNewTurn();
+
+        // Clear overwatch at start of new turn
+        ExitOverwatch();
+    }
+
     /// <summary>
-    /// Ensures the hero has Turn Left and Turn Right abilities.
+    /// Whether this hero can use Overwatch ability. Override to disable for specific heroes.
+    /// </summary>
+    protected virtual bool CanUseOverwatch => true;
+
+    /// <summary>
+    /// Ensures the hero has Turn Left, Turn Right, and Overwatch abilities.
     /// Creates them at runtime if not assigned in Inspector.
     /// </summary>
     private void EnsureTurnAbilities()
     {
         bool hasTurnLeft = false;
         bool hasTurnRight = false;
+        bool hasOverwatch = false;
 
         foreach (var ability in unitAbilities)
         {
             if (ability is TurnLeftAbility) hasTurnLeft = true;
             if (ability is TurnRightAbility) hasTurnRight = true;
+            if (ability is OverwatchAbility) hasOverwatch = true;
         }
 
         // Create and add Turn Left ability if missing
@@ -54,6 +78,13 @@ public class BaseHero : BaseUnit
         {
             var turnRight = ScriptableObject.CreateInstance<TurnRightAbility>();
             unitAbilities.Add(turnRight);
+        }
+
+        // Create and add Overwatch ability if missing and hero can use it
+        if (!hasOverwatch && CanUseOverwatch)
+        {
+            var overwatch = ScriptableObject.CreateInstance<OverwatchAbility>();
+            unitAbilities.Add(overwatch);
         }
     }
 
@@ -75,6 +106,47 @@ public class BaseHero : BaseUnit
         // Check defeat condition
         GameManager.Instance.CheckDefeatCondition();
     }
+
+    #region Overwatch
+
+    /// <summary>
+    /// Enters overwatch state, caching the current line of sight tiles.
+    /// While on overwatch, the hero will react-shoot enemies entering their LOS.
+    /// </summary>
+    public void EnterOverwatch()
+    {
+        IsOnOverwatch = true;
+        OverwatchLOSTiles = GetLineOfSightTiles();
+        Debug.Log($"[Overwatch] {UnitName} entered overwatch, watching {OverwatchLOSTiles.Count} tiles");
+    }
+
+    /// <summary>
+    /// Exits overwatch state, clearing cached LOS tiles.
+    /// Called when taking another action or at start of turn.
+    /// </summary>
+    public void ExitOverwatch()
+    {
+        if (IsOnOverwatch)
+        {
+            Debug.Log($"[Overwatch] {UnitName} exited overwatch");
+        }
+        IsOnOverwatch = false;
+        OverwatchLOSTiles = null;
+    }
+
+    /// <summary>
+    /// Called when the hero takes any action that should break overwatch.
+    /// </summary>
+    public void BreakOverwatch()
+    {
+        if (IsOnOverwatch)
+        {
+            Debug.Log($"[Overwatch] {UnitName}'s overwatch broken by taking action");
+            ExitOverwatch();
+        }
+    }
+
+    #endregion
 
     public HashSet<Tile> GetLineOfSightTiles()
     {

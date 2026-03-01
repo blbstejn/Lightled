@@ -18,6 +18,9 @@ public abstract class Tile : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 	/// </summary>
 	public virtual bool BlocksLineOfSight => false;
 
+	/// <summary>Whether this tile's type allows walking, regardless of occupancy or temporary effects.</summary>
+	public bool IsWalkableType => _isWalkable;
+
 	public bool Walkable
 	{
 		get
@@ -56,8 +59,8 @@ public abstract class Tile : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 			GridManager.Instance.ClearMoveHighlights();
 			GridManager.Instance.ClearLineOfSight();
 
-			GridManager.Instance.ShowImmediateMoveOptions(hoveredHero);
 			GridManager.Instance.ShowLineOfSight(hoveredHero);
+			GridManager.Instance.ShowImmediateMoveOptions(hoveredHero);
 
 			// Show tooltip for unselected heroes
 			if (hoveredHero != selectedHero && InGameUIManager.Instance != null)
@@ -96,8 +99,8 @@ public abstract class Tile : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
 		if (selectedHero != null)
 		{
-			GridManager.Instance.ShowImmediateMoveOptions(selectedHero);
 			GridManager.Instance.ShowLineOfSight(selectedHero);
+			GridManager.Instance.ShowImmediateMoveOptions(selectedHero);
 		}
 	}
 

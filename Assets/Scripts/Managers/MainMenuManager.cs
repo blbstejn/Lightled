@@ -14,6 +14,9 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private GameObject levelSelectPanel;
     [SerializeField] private GameObject optionsPanel;
     [SerializeField] private GameObject infoPanel;
+    [SerializeField] private GameObject lorePanel;
+    [SerializeField] private GameObject howToPlayPanel;
+    [SerializeField] private GameObject creditsPanel;
 
     [Header("Level Selection")]
     [SerializeField] private LevelData[] availableLevels;
@@ -29,11 +32,32 @@ public class MainMenuManager : MonoBehaviour
     [Tooltip("Parent panel for level details (hidden until a level is selected)")]
     [SerializeField] private GameObject levelDetailsPanel;
 
+    [Header("Unit Roster (Lore Panel)")]
+    [Tooltip("Assign the LoreData asset to populate the unit lists.")]
+    [SerializeField] private LoreData loreData;
+    [Tooltip("Text component in the lore panel that displays the overall story.")]
+    [SerializeField] private TMPro.TextMeshProUGUI loreStoryText;
+    [Tooltip("Parent transform for the generated hero list buttons.")]
+    [SerializeField] private Transform heroButtonContainer;
+    [Tooltip("Parent transform for the generated enemy list buttons.")]
+    [SerializeField] private Transform enemyButtonContainer;
+    [Tooltip("Panel to show/hide when a unit is selected. Hide it by default in the canvas.")]
+    [SerializeField] private GameObject unitDetailPanel;
+    [Tooltip("Image component to display the selected unit's sprite.")]
+    [SerializeField] private UnityEngine.UI.Image unitPortraitImage;
+    [Tooltip("Text component for the selected unit's name.")]
+    [SerializeField] private TMPro.TextMeshProUGUI unitNameText;
+    [Tooltip("Text component for the selected unit's title (role/rank).")]
+    [SerializeField] private TMPro.TextMeshProUGUI unitTitleText;
+    [Tooltip("Text component for the selected unit's lore description.")]
+    [SerializeField] private TMPro.TextMeshProUGUI unitDescriptionText;
+
     [Header("Scene Management")]
     [SerializeField] private string gameplaySceneName = "TestScene";
 
     private LevelData _selectedLevel;
     private Button _currentlySelectedButton;
+    private Button _currentlySelectedUnitButton;
 
     void Start()
     {
@@ -42,6 +66,9 @@ public class MainMenuManager : MonoBehaviour
         ShowMainMenu();
         GenerateLevelButtons();
         SetupLevelDetails();
+        GenerateUnitButtons();
+        if (unitDetailPanel != null) unitDetailPanel.SetActive(false);
+        if (loreStoryText != null && loreData != null) loreStoryText.text = loreData.overallStory;
     }
 
     /// <summary>
@@ -72,6 +99,9 @@ public class MainMenuManager : MonoBehaviour
         if (levelSelectPanel != null) levelSelectPanel.SetActive(false);
         if (optionsPanel != null) optionsPanel.SetActive(false);
         if (infoPanel != null) infoPanel.SetActive(false);
+        if (lorePanel != null) lorePanel.SetActive(false);
+        if (howToPlayPanel != null) howToPlayPanel.SetActive(false);
+        if (creditsPanel != null) creditsPanel.SetActive(false);
     }
 
     #region Panel Navigation
@@ -101,11 +131,35 @@ public class MainMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows the info panel (game rules, design, lore).
+    /// Shows the info panel (hub for Lore and How To Play).
     /// </summary>
     public void ShowInfo()
     {
         SetActivePanel(infoPanel);
+    }
+
+    /// <summary>
+    /// Shows the lore panel.
+    /// </summary>
+    public void ShowLore()
+    {
+        SetActivePanel(lorePanel);
+    }
+
+    /// <summary>
+    /// Shows the how to play panel.
+    /// </summary>
+    public void ShowHowToPlay()
+    {
+        SetActivePanel(howToPlayPanel);
+    }
+
+    /// <summary>
+    /// Shows the credits panel.
+    /// </summary>
+    public void ShowCredits()
+    {
+        SetActivePanel(creditsPanel);
     }
 
     private void SetActivePanel(GameObject panelToShow)
@@ -114,6 +168,9 @@ public class MainMenuManager : MonoBehaviour
         if (levelSelectPanel != null) levelSelectPanel.SetActive(panelToShow == levelSelectPanel);
         if (optionsPanel != null) optionsPanel.SetActive(panelToShow == optionsPanel);
         if (infoPanel != null) infoPanel.SetActive(panelToShow == infoPanel);
+        if (lorePanel != null) lorePanel.SetActive(panelToShow == lorePanel);
+        if (howToPlayPanel != null) howToPlayPanel.SetActive(panelToShow == howToPlayPanel);
+        if (creditsPanel != null) creditsPanel.SetActive(panelToShow == creditsPanel);
     }
 
     #endregion
@@ -326,6 +383,122 @@ public class MainMenuManager : MonoBehaviour
 
     #endregion
 
+    #region Unit Roster
+
+    /// <summary>
+    /// Generates hero buttons and enemy buttons into their respective containers.
+    /// Data (name, title, portrait, description) is read directly from each unit prefab.
+    /// </summary>
+    private void GenerateUnitButtons()
+    {
+        if (loreData == null) return;
+
+        if (loreData.heroes != null)
+            PopulateUnitButtonContainer(heroButtonContainer, loreData.heroes);
+
+        if (loreData.enemies != null)
+            PopulateUnitButtonContainer(enemyButtonContainer, loreData.enemies);
+    }
+
+    private void PopulateUnitButtonContainer(Transform container, BaseUnit[] units)
+    {
+        if (container == null) return;
+
+        // Clear previously generated buttons
+        for (int i = container.childCount - 1; i >= 0; i--)
+        {
+            Transform child = container.GetChild(i);
+            if (child.name.StartsWith("UnitButton_"))
+                Destroy(child.gameObject);
+        }
+
+        for (int i = 0; i < units.Length; i++)
+        {
+            BaseUnit unit = units[i];
+            if (unit == null) continue;
+
+            // Button root — Vertical Layout Group handles all positioning
+            GameObject buttonObj = new GameObject($"UnitButton_{i}_{unit.UnitName}", typeof(RectTransform));
+            buttonObj.transform.SetParent(container, false);
+
+            // Fixed height; width is controlled by the VLG's child width setting
+            RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(0f, 40f);
+
+            Button button = buttonObj.AddComponent<Button>();
+            Image buttonImage = buttonObj.AddComponent<Image>();
+            buttonImage.color = Color.white;
+
+            // Label
+            GameObject textObj = new GameObject("Text", typeof(RectTransform));
+            textObj.transform.SetParent(buttonObj.transform, false);
+
+            RectTransform textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.offsetMin = new Vector2(10, 4);
+            textRect.offsetMax = new Vector2(-10, -4);
+
+            TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
+            tmpText.text = unit.UnitName;
+            tmpText.fontSize = 18;
+            tmpText.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+            tmpText.alignment = TextAlignmentOptions.Left;
+
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(1f, 1f, 1f, 1f);
+            colors.highlightedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
+            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
+            colors.selectedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
+            button.colors = colors;
+
+            BaseUnit capturedUnit = unit;
+            Button capturedButton = button;
+            button.onClick.AddListener(() => OnUnitSelected(capturedUnit, capturedButton));
+        }
+    }
+
+    /// <summary>
+    /// Called when a unit button is clicked.
+    /// Reads portrait, name, title, and description directly from the unit prefab.
+    /// </summary>
+    private void OnUnitSelected(BaseUnit unit, Button clickedButton)
+    {
+        // Update button highlight
+        if (_currentlySelectedUnitButton != null)
+        {
+            var prevColors = _currentlySelectedUnitButton.colors;
+            prevColors.normalColor = Color.white;
+            _currentlySelectedUnitButton.colors = prevColors;
+        }
+
+        _currentlySelectedUnitButton = clickedButton;
+        if (_currentlySelectedUnitButton != null)
+        {
+            var colors = _currentlySelectedUnitButton.colors;
+            colors.normalColor = new Color(0.85f, 0.92f, 1f, 1f);
+            _currentlySelectedUnitButton.colors = colors;
+        }
+
+        // Show detail panel
+        if (unitDetailPanel != null) unitDetailPanel.SetActive(true);
+
+        // Portrait — read sprite directly from the unit's SpriteRenderer
+        if (unitPortraitImage != null)
+        {
+            Sprite unitSprite = unit.GetComponentInChildren<SpriteRenderer>()?.sprite;
+            unitPortraitImage.sprite = unitSprite;
+            unitPortraitImage.gameObject.SetActive(unitSprite != null);
+        }
+
+        if (unitNameText != null) unitNameText.text = unit.UnitName;
+        if (unitTitleText != null) unitTitleText.text = unit.title;
+        if (unitDescriptionText != null) unitDescriptionText.text = unit.description;
+    }
+
+    #endregion
+
     #region Button Callbacks
 
     /// <summary>
@@ -350,6 +523,38 @@ public class MainMenuManager : MonoBehaviour
     public void OnInfoButtonClicked()
     {
         ShowInfo();
+    }
+
+    /// <summary>
+    /// Called by the Lore button inside the info panel.
+    /// </summary>
+    public void OnLoreButtonClicked()
+    {
+        ShowLore();
+    }
+
+    /// <summary>
+    /// Called by the How To Play button inside the info panel.
+    /// </summary>
+    public void OnHowToPlayButtonClicked()
+    {
+        ShowHowToPlay();
+    }
+
+    /// <summary>
+    /// Called by Back buttons inside Lore or How To Play panels — returns to the info hub.
+    /// </summary>
+    public void OnInfoSubPanelBackButtonClicked()
+    {
+        ShowInfo();
+    }
+
+    /// <summary>
+    /// Called by the Credits button.
+    /// </summary>
+    public void OnCreditsButtonClicked()
+    {
+        ShowCredits();
     }
 
     /// <summary>

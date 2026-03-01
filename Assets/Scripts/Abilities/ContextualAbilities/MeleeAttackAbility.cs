@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class MeleeAttackAbility : TargetedAbility
 {
@@ -84,9 +84,18 @@ public class MeleeAttackAbility : TargetedAbility
         // Melee attack breaks sustained fire
         unit.BreakSustainedFire();
 
+        // Melee attack breaks overwatch
+        if (unit is BaseHero heroUnit)
+        {
+            heroUnit.BreakOverwatch();
+        }
+
+        // Flash the defender to show they're being attacked
+        defender.FlashHit();
+
         // Determine dice count: heroes get 1 die, ghouls/enemies get 3 dice
-        int attackerDice = GetDiceCount(attacker);
-        int defenderDice = GetDiceCount(defender);
+        int attackerDice = GetDiceCount(attacker, true);
+        int defenderDice = GetDiceCount(defender, false);
 
         // Roll dice and get highest for each side
         int attackerBest = RollDiceGetHighest(attackerDice);
@@ -129,14 +138,19 @@ public class MeleeAttackAbility : TargetedAbility
             Debug.Log($"[MeleeAttack] TIE! Both rolled {attackerBest}. No effect.");
         }
 
-        // Notify the director AI that combat occurred
         DirectorAI.Instance?.RegisterCombatEvent();
     }
 
-    private int GetDiceCount(BaseUnit unit)
+    private int GetDiceCount(BaseUnit unit, bool bIsAttacking)
     {
-        // Heroes get 1 die, enemies (ghouls) get 3 dice
-        return unit.Faction == Faction.Hero ? 1 : 3;
+        if (unit.Faction == Faction.Hero)
+            return bIsAttacking ? 2 : 1;
+
+        int modifier = DirectorAI.Instance?.GetMeleeDiceModifier() ?? 0;
+        int dice = Mathf.Max(1, 3 + modifier);
+        if (modifier != 0)
+            Debug.Log($"[MeleeAttack] Director adjusts enemy dice by {modifier:+#;-#}: {dice}d6");
+        return dice;
     }
 
     private int RollDiceGetHighest(int diceCount)

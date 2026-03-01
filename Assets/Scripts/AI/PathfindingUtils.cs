@@ -156,9 +156,12 @@ public static class PathfindingUtils
     /// Finds the best safe move toward a target (closest to target while avoiding hero LOS).
     /// Returns null if no safe moves exist.
     /// </summary>
-    public static Tile FindBestSafeMoveToward(BaseEnemy enemy, Tile target, HashSet<Tile> heroLOS)
+    public static Tile FindBestSafeMoveToward(BaseEnemy enemy, Tile target, HashSet<Tile> heroLOS, Tile excludeTile = null)
     {
         var safeMoves = GetSafeMoves(enemy, heroLOS);
+
+        if (excludeTile != null)
+            safeMoves.RemoveAll(t => t == excludeTile);
 
         if (safeMoves.Count == 0)
             return null;
@@ -174,9 +177,12 @@ public static class PathfindingUtils
     /// Finds the best move toward a target (ignoring LOS, for ghouls).
     /// Returns null if no walkable moves exist.
     /// </summary>
-    public static Tile FindBestMoveToward(BaseEnemy enemy, Tile target)
+    public static Tile FindBestMoveToward(BaseEnemy enemy, Tile target, Tile excludeTile = null)
     {
         var walkableMoves = GetWalkableMoves(enemy);
+
+        if (excludeTile != null)
+            walkableMoves.RemoveAll(t => t == excludeTile);
 
         if (walkableMoves.Count == 0)
             return null;
@@ -184,6 +190,90 @@ public static class PathfindingUtils
         // Sort by distance to target (ascending) then by movement cost (prefer cheaper moves)
         return walkableMoves
             .OrderBy(t => ManhattanDistance(t, target))
+            .ThenBy(t => enemy.GetMoveCost(t))
+            .FirstOrDefault();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  BFS Path Distance — accounts for walls and obstacles
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Computes a BFS distance map from the target tile.
+    /// Uses tile type only (ignores occupancy and fire) so paths through
+    /// temporarily occupied tiles are still considered reachable.
+    /// </summary>
+    public static Dictionary<Tile, int> ComputeDistanceMap(Tile target)
+    {
+        var distMap = new Dictionary<Tile, int>();
+        if (target == null) return distMap;
+
+        var queue = new Queue<Tile>();
+        distMap[target] = 0;
+        queue.Enqueue(target);
+
+        while (queue.Count > 0)
+        {
+            Tile current = queue.Dequeue();
+            int currentDist = distMap[current];
+
+            foreach (var neighbor in GridManager.Instance.GetNeighbours(current))
+            {
+                if (neighbor == null || distMap.ContainsKey(neighbor) || !neighbor.IsWalkableType)
+                    continue;
+
+                distMap[neighbor] = currentDist + 1;
+                queue.Enqueue(neighbor);
+            }
+        }
+
+        return distMap;
+    }
+
+    /// <summary>
+    /// Looks up the actual walking distance from a tile using a precomputed distance map.
+    /// Returns int.MaxValue if the tile is unreachable.
+    /// </summary>
+    public static int GetPathDistance(Tile tile, Dictionary<Tile, int> distMap)
+    {
+        if (tile == null || distMap == null) return int.MaxValue;
+        return distMap.TryGetValue(tile, out int dist) ? dist : int.MaxValue;
+    }
+
+    /// <summary>
+    /// Finds the best move toward a target using actual path distance (BFS).
+    /// </summary>
+    public static Tile FindBestMoveToward(BaseEnemy enemy, Dictionary<Tile, int> distMap, Tile excludeTile = null)
+    {
+        var walkableMoves = GetWalkableMoves(enemy);
+
+        if (excludeTile != null)
+            walkableMoves.RemoveAll(t => t == excludeTile);
+
+        if (walkableMoves.Count == 0)
+            return null;
+
+        return walkableMoves
+            .OrderBy(t => GetPathDistance(t, distMap))
+            .ThenBy(t => enemy.GetMoveCost(t))
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Finds the best safe move toward a target using actual path distance (BFS).
+    /// </summary>
+    public static Tile FindBestSafeMoveToward(BaseEnemy enemy, Dictionary<Tile, int> distMap, HashSet<Tile> heroLOS, Tile excludeTile = null)
+    {
+        var safeMoves = GetSafeMoves(enemy, heroLOS);
+
+        if (excludeTile != null)
+            safeMoves.RemoveAll(t => t == excludeTile);
+
+        if (safeMoves.Count == 0)
+            return null;
+
+        return safeMoves
+            .OrderBy(t => GetPathDistance(t, distMap))
             .ThenBy(t => enemy.GetMoveCost(t))
             .FirstOrDefault();
     }

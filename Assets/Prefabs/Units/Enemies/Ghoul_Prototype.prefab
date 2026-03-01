@@ -81,7 +81,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: -8619938530171454138, guid: 2a4c5372783dfa34bb6272e9539ee89c, type: 3}
+  m_Sprite: {fileID: 6515602111186535438, guid: d81a9132b55e3ad47a8d453e73e5cdb8, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -105,9 +105,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy1
   UnitName: Ghoul
+  title: 
+  description: 
   OccupiedTile: {fileID: 0}
   Faction: 1
-  maxHP: 2
   unitAbilities: []
   movementProfile:
     allowSideways: 1
@@ -115,6 +116,7 @@ MonoBehaviour:
     backwardCost: 2
   moveSpeed: 5
   facing: 0
+  aiBehavior: {fileID: 0}
 --- !u!114 &6479516564042885951
 MonoBehaviour:
   m_ObjectHideFlags: 0

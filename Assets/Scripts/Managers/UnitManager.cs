@@ -10,10 +10,15 @@ public class UnitManager : MonoBehaviour
     private List<ScriptableUnit> _units;
     private List<BaseHero> _spawnedHeroes = new List<BaseHero>();
     private List<BaseEnemy> _spawnedEnemies = new List<BaseEnemy>();
+    private List<BaseHero> _escapedHeroes = new List<BaseHero>();
+    private bool _artifactCarrierEscaped = false;
 
     public BaseHero SelectedHero;
     public IReadOnlyList<BaseHero> SpawnedHeroes => _spawnedHeroes;
     public IReadOnlyList<BaseEnemy> SpawnedEnemies => _spawnedEnemies;
+    public IReadOnlyList<BaseHero> EscapedHeroes => _escapedHeroes;
+    public int EscapedHeroCount => _escapedHeroes.Count;
+    public bool ArtifactCarrierEscaped => _artifactCarrierEscaped;
 
     void Awake()
     {
@@ -202,6 +207,15 @@ public class UnitManager : MonoBehaviour
             score += Mathf.Max(0f, 30f - (distToHeroes - 6f) * 5f);
         }
 
+        // Layer 2: Director AI biases spawn positions based on pressure
+        // Positive bias (high pressure) = reward far tiles (less threatening spawns)
+        // Negative bias (low pressure) = reward close tiles (escalation)
+        if (DirectorAI.Instance != null)
+        {
+            float bias = DirectorAI.Instance.GetSpawnPositionBias();
+            score += bias * (distToHeroes / 10f);
+        }
+
         // Small random factor to add variety
         score += Random.Range(0f, 10f);
 
@@ -285,8 +299,55 @@ public class UnitManager : MonoBehaviour
         if (SelectedHero == hero)
             SelectedHero = null;
 
-        // Notify the director AI that a hero was lost
         DirectorAI.Instance?.RegisterHeroDeath();
+    }
+
+    /// <summary>
+    /// Removes a hero from play as "escaped" (not dead).
+    /// Does NOT trigger defeat checks, death hooks, or artifact drops.
+    /// </summary>
+    public void EscapeHero(BaseHero hero)
+    {
+        if (hero == null || _escapedHeroes.Contains(hero))
+            return;
+
+        // Track artifact status before destroying the object
+        if (hero.HasArtifact)
+        {
+            _artifactCarrierEscaped = true;
+            Debug.Log($"[Escape] {hero.UnitName} has escaped with the artifact!");
+        }
+        else
+        {
+            Debug.Log($"[Escape] {hero.UnitName} has escaped!");
+        }
+
+        _escapedHeroes.Add(hero);
+        _spawnedHeroes.Remove(hero);
+
+        if (SelectedHero == hero)
+            SelectedHero = null;
+
+        // Clean removal from tile (not death)
+        if (hero.OccupiedTile != null)
+        {
+            hero.OccupiedTile.OccupiedUnit = null;
+        }
+
+        // Notify UI to clear any references
+        if (InGameUIManager.Instance != null)
+            InGameUIManager.Instance.OnUnitDestroyed(hero);
+
+        Destroy(hero.gameObject);
+    }
+
+    /// <summary>
+    /// Resets escape tracking. Called when starting a new level.
+    /// </summary>
+    public void ClearEscapedHeroes()
+    {
+        _escapedHeroes.Clear();
+        _artifactCarrierEscaped = false;
     }
 
     private T GetRandomUnit<T>(Faction faction) where T : BaseUnit

@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0392c420653f98e448744b6ced14235b, type: 3}
   m_Name: Level04_Pitfall
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
-  levelName: Level 1
+  levelName: Pitfall
   levelNumber: 1
+  description: Enter level description here...
   gridRows:
   - 
   walkableChar: 46

@@ -58,6 +58,19 @@ public static class CombatDebugLog
     }
 
     /// <summary>
+    /// Logs an overwatch reaction shot with dice rolls.
+    /// </summary>
+    public static void LogOverwatchAttack(string attacker, string target, int roll1, int roll2, int threshold, bool hit)
+    {
+        string rollStr = $"[{roll1}][{roll2}] vs {threshold}+";
+        string result = hit ? "HIT" : "MISS";
+        Color color = hit ? new Color(0.6f, 0.9f, 1f) : new Color(0.4f, 0.6f, 0.8f);
+
+        AddEntry(hit ? LogType.Hit : LogType.Miss,
+            $"OVERWATCH: {attacker} -> {target}: {rollStr} = {result}", color);
+    }
+
+    /// <summary>
     /// Logs a melee attack attempt with dice rolls (legacy).
     /// </summary>
     public static void LogMeleeAttack(string attacker, string target, int roll1, int roll2, int threshold, bool hit)

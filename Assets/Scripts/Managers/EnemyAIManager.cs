@@ -23,7 +23,7 @@ public class EnemyAIManager : MonoBehaviour
 
     [Header("Turn Execution")]
     [Tooltip("Delay between enemy actions (seconds) for visual pacing")]
-    [SerializeField] private float delayBetweenActions = 0.3f;
+    [SerializeField] private float delayBetweenActions = 0.2f;
 
     private bool _isProcessingTurn = false;
     public bool IsProcessingTurn => _isProcessingTurn;
@@ -57,6 +57,9 @@ public class EnemyAIManager : MonoBehaviour
         _currentTurn++;
         Debug.Log($"[AI] === ENEMY TURN {_currentTurn} STARTED ===");
         AIDebugLog.LogTurnStart(_currentTurn);
+
+        // Recalculate pressure before spawn decisions
+        DirectorAI.Instance?.RecalculatePressure();
 
         // Phase 1: Spawn new blips (ramping each turn)
         yield return SpawnPhase();
@@ -94,11 +97,18 @@ public class EnemyAIManager : MonoBehaviour
     private IEnumerator SpawnPhase()
     {
         int blipsToSpawn = GetBlipsToSpawnThisTurn();
-        Debug.Log($"[AI] Spawn Phase: Spawning {blipsToSpawn} blips (turn {_currentTurn})");
+        Debug.Log($"[AI] Spawn Phase: Spawning up to {blipsToSpawn} blips (turn {_currentTurn})");
 
         int spawned = 0;
         for (int i = 0; i < blipsToSpawn; i++)
         {
+            // Layer 2: Director AI can probabilistically skip individual spawns
+            if (DirectorAI.Instance != null && DirectorAI.Instance.ShouldSkipSpawn())
+            {
+                Debug.Log($"[AI] Spawn Phase: Director deferred spawn #{i + 1}");
+                continue;
+            }
+
             var spawnedBlip = UnitManager.Instance.SpawnBlip();
             if (spawnedBlip != null)
             {
@@ -148,10 +158,15 @@ public class EnemyAIManager : MonoBehaviour
         // Get a snapshot of enemies (list may change during processing)
         var enemies = new List<BaseEnemy>(UnitManager.Instance.SpawnedEnemies);
 
-        // Sort: Blips first (Enemy2), then Ghouls (Enemy1)
+        // Sort: closest to any hero first, then by type (Blips before Ghouls) as tiebreaker
+        var heroes = UnitManager.Instance.SpawnedHeroes;
         enemies = enemies
             .Where(e => e != null && e.IsAlive)
-            .OrderBy(e => e is Enemy2 ? 0 : 1)
+            .OrderBy(e => heroes.Where(h => h != null && h.IsAlive)
+                .Select(h => Vector2.Distance(e.OccupiedTile.transform.position, h.OccupiedTile.transform.position))
+                .DefaultIfEmpty(float.MaxValue)
+                .Min())
+            .ThenBy(e => e is Enemy2 ? 0 : 1)
             .ToList();
 
         Debug.Log($"[AI] Action Phase: Processing {enemies.Count} enemies");
@@ -219,10 +234,14 @@ public class EnemyAIManager : MonoBehaviour
                         blip.IntentionalReveal();
                         yield return new WaitForSeconds(delayBetweenActions);
                         // Blip is destroyed after reveal, exit loop
+                        DirectorAI.Instance?.RecalculatePressure();
                         yield break;
                     }
                     break;
             }
+
+            // Recalculate pressure after each action so the next enemy uses current data
+            DirectorAI.Instance?.RecalculatePressure();
         }
 
         Debug.Log($"[AI] {enemy.UnitName}: Turn ended (AP: {enemy.CurrentActionPoints})");

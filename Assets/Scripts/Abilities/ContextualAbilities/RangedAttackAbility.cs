@@ -74,6 +74,12 @@ public class RangedAttackAbility : TargetedAbility
     {
         Debug.Log($"[RangedAttack] Execute: {unit.UnitName} shooting at tile ({target.X},{target.Y})");
 
+        // Shooting breaks overwatch
+        if (unit is BaseHero hero)
+        {
+            hero.BreakOverwatch();
+        }
+
         // Note: CanExecute is checked in Tile.OnPointerClick before calling Execute
         // CP is also spent there if needed, so we only spend remaining AP here
 
@@ -115,6 +121,16 @@ public class RangedAttackAbility : TargetedAbility
             Debug.Log($"[RangedAttack] {unit.UnitName} shooting at {targetUnit.UnitName} (6+ to hit)");
         }
 
+        int thresholdMod = DirectorAI.Instance?.GetHitThresholdModifier() ?? 0;
+        if (thresholdMod != 0)
+        {
+            hitThreshold = Mathf.Clamp(hitThreshold + thresholdMod, 3, 6);
+            Debug.Log($"[RangedAttack] Director adjusts hit threshold by {thresholdMod:+#;-#}: now {hitThreshold}+");
+        }
+
+        // Flash the target to show they're being attacked
+        targetUnit.FlashHit();
+
         // Roll two dice
         int roll1 = Random.Range(1, 7);
         int roll2 = Random.Range(1, 7);
@@ -143,5 +159,7 @@ public class RangedAttackAbility : TargetedAbility
                 Debug.Log($"[RangedAttack] Sustained fire target set to {targetUnit.UnitName}");
             }
         }
+
+        DirectorAI.Instance?.RegisterCombatEvent();
     }
 }

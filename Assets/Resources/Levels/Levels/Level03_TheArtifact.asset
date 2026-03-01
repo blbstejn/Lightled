@@ -14,9 +14,48 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   levelName: The Artifact
   levelNumber: 3
-  description: Enter level description here...
+  description: 'After days of travel the knights come across a rare sight: an artifact
+    from the crusade!
+
+
+    With its help on their side, the exhausted heroes might
+    just make their way out...
+
+
+    In this stage, the knight carrying the artifact
+    has to escape.'
   gridRows:
-  - 
+  - '                     #######     '
+  - '                     B.....#    '
+  - '                     ##.##.#     '
+  - '                      #B##.#     '
+  - '                         #.#     '
+  - '                         #.#     '
+  - '#B#             #####    #.#     '
+  - '#.###############...######.#     '
+  - '#..........................#     '
+  - '#########.##.####...######.#     '
+  - '        #.##.#  ##.##    #.#     '
+  - '        #.##.#   #.#     #.#     '
+  - '        #.##.#   #.#######.######'
+  - '        #.##.#####.##...##.##...#'
+  - '        #.....................A.#'
+  - '        #.##.#####.##...##.##...#'
+  - ' ########.##.#   #.#######.######'
+  - ' #T54321..##.#   #.#     #.#     '
+  - ' ########.##.#  ##.##    #.#     '
+  - '        #.##.####...######.#     '
+  - '        #..................#     '
+  - '        #.#######...######.#     '
+  - '        #.#     #####    #.#     '
+  - '        #.#              #.#     '
+  - '        #.#              #.#     '
+  - '        #.#              #.#     '
+  - '        #.#              #.#     '
+  - '       ##.#             ##.##    '
+  - '       B..#             B...B    '
+  - '       ####             ##.##    '
+  - '                         #B#     '
   walkableChar: 46
   wallChar: 35
   voidChar: 32
@@ -24,4 +63,6 @@ MonoBehaviour:
   blipSpawnChar: 66
   artifactChar: 65
   targetChar: 84
-  requiresArtifact: 0
+  victoryConditionType: 0
+  requiresArtifact: 1
+  requiredEscapees: 1

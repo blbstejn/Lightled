@@ -81,7 +81,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: 5925523683700343950, guid: 489c8f4ee96b3d04baaba7f318b82933, type: 3}
+  m_Sprite: {fileID: 3897317540139758695, guid: f5f05fa434d509244a7c49d46be7da21, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -105,9 +105,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero1
   UnitName: Herbert
+  title: 
+  description: 
   OccupiedTile: {fileID: 0}
   Faction: 0
-  maxHP: 10
   unitAbilities: []
   movementProfile:
     allowSideways: 0

@@ -138,6 +138,9 @@ public class FireEffectManager : MonoBehaviour
 
     private void RollFireDamage(BaseUnit unit)
     {
+        // Flash the unit to show they're being damaged by fire
+        unit.FlashHit();
+
         int roll = Random.Range(1, 7);
         int threshold = 2;
         bool killed = roll >= threshold;

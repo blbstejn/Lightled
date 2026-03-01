@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 
@@ -6,6 +7,9 @@ public class BaseEnemy : BaseUnit
     [Header("AI")]
     [SerializeField] protected EnemyBehavior aiBehavior;
     public EnemyBehavior AIBehavior => aiBehavior;
+
+    private Tile _previousTile;
+    public Tile PreviousTile => _previousTile;
 
     public override void Awake()
     {
@@ -21,7 +25,7 @@ public class BaseEnemy : BaseUnit
         if (facing == newFacing)
             return;
 
-        facing = newFacing;
+        SetFacing(newFacing);
         OnFacingChanged();
     }
 
@@ -63,8 +67,48 @@ public class BaseEnemy : BaseUnit
             return;
         }
 
+        // Track previous tile for anti-oscillation
+        _previousTile = OccupiedTile;
+
         // Use existing movement system
         MoveOneTile(target);
+    }
+
+    /// <summary>
+    /// Override movement coroutine to trigger overwatch checks when entering a tile.
+    /// </summary>
+    protected override IEnumerator MoveCoroutine(Tile target)
+    {
+        IsMoving = true;
+
+        Vector3 startPos = transform.position;
+        Vector3 targetPos = target.transform.position;
+
+        float t = 0f;
+        float moveSpeed = 5f;
+
+        while (t < 1f)
+        {
+            t += Time.deltaTime * moveSpeed;
+            transform.position = Vector3.Lerp(startPos, targetPos, t);
+            yield return null;
+        }
+
+        // Set the unit on the tile - this is when the enemy "enters" the tile
+        target.SetUnit(this);
+
+        // Trigger overwatch checks - enemy has entered a new tile
+        if (OverwatchManager.Instance != null)
+        {
+            OverwatchManager.Instance.OnEnemyEnteredTile(this, target);
+
+            // Wait for overwatch processing to complete (if any shots were fired)
+            // This ensures the enemy waits for reaction shots before continuing
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        IsMoving = false;
+        OnMoveEnded();
     }
 
     /// <summary>

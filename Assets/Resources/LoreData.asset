@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeb7cb2311a8cd447978d2826d2d4693, type: 3}
+  m_Name: LoreData
+  m_EditorClassIdentifier: Assembly-CSharp::LoreData
+  overallStory: The crusade has failed!
+  heroes:
+  - {fileID: 375022305395541579, guid: 89f3d8369afdcb448a5ee7de454ffaf3, type: 3}
+  - {fileID: 375022305395541589, guid: 89f3d8369afdcb448a5ee7de454ffaf4, type: 3}
+  - {fileID: 375022305395541599, guid: 89f3d8369afdcb448a5ee7de454ffaf5, type: 3}
+  - {fileID: 375022305395541609, guid: 89f3d8369afdcb448a5ee7de454ffaf6, type: 3}
+  - {fileID: 375022305395541619, guid: 89f3d8369afdcb448a5ee7de454ffaf7, type: 3}
+  enemies:
+  - {fileID: 8847392847233551923, guid: 7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d, type: 3}
+  - {fileID: 2181189450159112630, guid: 180d7d8db17a0ed4caac63ae5e111299, type: 3}

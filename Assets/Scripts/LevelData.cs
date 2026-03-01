@@ -1,5 +1,11 @@
 using UnityEngine;
 
+public enum VictoryConditionType
+{
+    Escape = 0,             // Heroes on target tiles are removed (escaped) at end of enemy turn
+    FlamethrowerTarget = 1  // Flamethrower shot hitting any target tile = instant win
+}
+
 /// <summary>
 /// Defines a level layout using ASCII-style string encoding.
 /// Create new levels via: Right-click in Project > Create > Game > Level Data
@@ -55,8 +61,15 @@ public class LevelData : ScriptableObject
     public char targetChar = 'T';
 
     [Header("Victory Conditions")]
+    [Tooltip("The type of victory condition for this level.")]
+    public VictoryConditionType victoryConditionType = VictoryConditionType.Escape;
+
     [Tooltip("If true, a hero must carry the artifact to the target. If false, just reaching the target is enough.")]
     public bool requiresArtifact = false;
+
+    [Tooltip("(Escape mode only) Minimum number of heroes that must escape to win.")]
+    [Min(1)]
+    public int requiredEscapees = 1;
 
     // Computed properties
     public int Width => gridRows != null && gridRows.Length > 0 ? gridRows[0].Length : 0;
@@ -138,6 +151,26 @@ public class LevelData : ScriptableObject
             {
                 Debug.LogWarning($"LevelData '{name}': Row {i} has different length ({gridRows[i].Length}) than row 0 ({firstRowLength})");
             }
+        }
+
+        // Validate Escape mode settings
+        if (victoryConditionType == VictoryConditionType.Escape && requiredEscapees < 1)
+        {
+            Debug.LogWarning($"LevelData '{name}': Escape mode requires at least 1 escapee, setting to 1.");
+            requiredEscapees = 1;
+        }
+
+        // Validate FlamethrowerTarget has target tiles
+        if (victoryConditionType == VictoryConditionType.FlamethrowerTarget)
+        {
+            bool hasTargetTile = false;
+            for (int y = 0; y < Height && !hasTargetTile; y++)
+                for (int x = 0; x < Width && !hasTargetTile; x++)
+                    if (GetTileType(x, y) == TileType.Target)
+                        hasTargetTile = true;
+
+            if (!hasTargetTile)
+                Debug.LogWarning($"LevelData '{name}': FlamethrowerTarget mode requires at least one target tile ('T')!");
         }
 
         return true;

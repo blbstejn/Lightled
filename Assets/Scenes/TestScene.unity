@@ -1568,7 +1568,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Victory!
+  m_text: Defeat!
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -3859,7 +3859,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DirectorAI
   proximityWeight: 0.3
   outnumberedWeight: 0.2
-  hiddenThreatWeight: 0.15
+  hiddenThreatWeight: 0.05
   heroLossWeight: 0.15
   resourceWeight: 0.1
   recentCombatWeight: 0.1
@@ -3867,6 +3867,10 @@ MonoBehaviour:
   combatDecayRate: 0.2
   maxThreatDistance: 8
   maxBlipThreatCount: 3
+  calmThreshold: 0.15
+  hotThreshold: 0.65
+  stalenessNudgeTime: 8
+  stalenessEscalateTime: 16
 --- !u!1 &1276830858
 GameObject:
   m_ObjectHideFlags: 0

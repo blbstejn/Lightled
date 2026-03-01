@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using UnityEngine;
 
 // ghoul
@@ -16,6 +16,35 @@ public class Enemy1 : BaseEnemy
         base.Awake();
         SetupAbilities();
         SetupAI();
+    }
+
+    /// <summary>
+    /// After moving, ghouls get a free turn to face their target.
+    /// </summary>
+    protected override void OnMoveEnded()
+    {
+        base.OnMoveEnded();
+
+        // Free turn after movement - face toward preferred target or nearest hero
+        BaseHero target = PreferredTarget;
+        if (target == null || !target.IsAlive || target.OccupiedTile == null)
+        {
+            // Find nearest hero
+            target = UnitManager.Instance?.SpawnedHeroes
+                .Where(h => h != null && h.IsAlive && h.OccupiedTile != null)
+                .OrderBy(h => PathfindingUtils.ManhattanDistance(OccupiedTile, h.OccupiedTile))
+                .FirstOrDefault();
+        }
+
+        if (target != null && OccupiedTile != null)
+        {
+            FacingDirection dirToTarget = PathfindingUtils.GetDirectionToward(OccupiedTile, target.OccupiedTile);
+            if (dirToTarget != Facing)
+            {
+                TurnFree(dirToTarget);
+                Debug.Log($"[Ghoul] {UnitName} free turn after move: now facing {dirToTarget} toward {target.UnitName}");
+            }
+        }
     }
 
     private void SetupAbilities()

@@ -3,339 +3,475 @@ using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// The director's current assessment of player pressure.
-/// Determines what the director "thinks" about the game state.
+/// Pressure level thresholds for Director intervention intensity.
+/// Maps to the concept's four-tier intervention model (Abschnitt 8.4.1).
 /// </summary>
-public enum DirectorState
+public enum PressureLevel
 {
-    /// <summary>Tension below 0.2 — players are in control, no immediate threats.</summary>
-    Calm,
+    /// <summary>Pressure below 0.25 — players are in control. Escalation permitted.</summary>
+    Low,
 
-    /// <summary>Tension 0.2-0.5 — threats are forming, pressure is rising.</summary>
-    Building,
+    /// <summary>Pressure 0.25-0.50 — manageable challenge. No intervention.</summary>
+    Moderate,
 
-    /// <summary>Tension 0.5-0.75 — significant danger, enemies closing in.</summary>
-    Escalating,
+    /// <summary>Pressure 0.50-0.70 — significant strain. Soft stabilization active.</summary>
+    Elevated,
 
-    /// <summary>Tension above 0.75 — overwhelming pressure, heroes in serious trouble.</summary>
+    /// <summary>Pressure above 0.70 — critical overload. Strong stabilization active.</summary>
     Critical
 }
 
 /// <summary>
-/// AI Director that monitors player stress and tension.
-/// Computes a continuous tension score (0-1) from multiple game state factors.
-/// Currently measurement-only — does not influence gameplay.
+/// Director AI implementing a pressure-based adaptive system for turn-based tactical gameplay.
+///
+/// Architecture follows the Transparenz-Schichten-Modell (Abschnitt 8.3):
+///   Layer 1 (Protected): Grid, combat math, LOS, movement costs — never touched.
+///   Layer 2 (Modulatable): AI aggression, spawn rate/positioning — adjusted via intervention API.
+///   Layer 3 (Analytics): Pressure score computed from weighted game-state factors — read-only measurement.
+///
+/// The Director measures player pressure continuously (Layer 3), then provides
+/// intervention parameters (Layer 2) that other systems query during their execution.
+/// It never directly manipulates game state — it only influences decisions made by
+/// EnemyAIManager (spawn count/positioning) and BlipBehavior (aggression scaling).
 /// </summary>
 public class DirectorAI : MonoBehaviour
 {
     public static DirectorAI Instance;
 
-    // ─── Tension weights ───
-    // Each weight controls how much a factor contributes to the final tension score.
-    // All weights should sum to 1.0 for a normalized output.
+    // ═══════════════════════════════════════════════════════════════
+    //  LAYER 3: Pressure Measurement Configuration
+    // ═══════════════════════════════════════════════════════════════
 
-    [Header("Tension Weights")]
+    [Header("Pressure Weights (sum to 1.0)")]
 
-    [Tooltip("Weight for closest enemy-to-hero distance. This is the most immediate pressure signal.")]
+    [Tooltip("Weight for closest enemy-to-hero distance. Immediate spatial threat.")]
     [SerializeField] private float proximityWeight = 0.30f;
 
-    [Tooltip("Weight for enemy:hero ratio. Being outnumbered raises tension.")]
-    [SerializeField] private float outnumberedWeight = 0.20f;
+    [Tooltip("Weight for enemy:hero ratio. Being outnumbered raises pressure.")]
+    [SerializeField] private float outnumberedWeight = 0.15f;
 
     [Tooltip("Weight for unrevealed blips on the board. Unknown threats create dread.")]
-    [SerializeField] private float hiddenThreatWeight = 0.15f;
+    [SerializeField] private float hiddenThreatWeight = 0.10f;
 
-    [Tooltip("Weight for fraction of heroes lost. Losing squadmates is devastating.")]
-    [SerializeField] private float heroLossWeight = 0.15f;
+    [Tooltip("Weight for fraction of heroes lost. Losing squad members is devastating.")]
+    [SerializeField] private float heroLossWeight = 0.25f;
 
-    [Tooltip("Weight for low command points. Fewer CP means less tactical flexibility.")]
-    [SerializeField] private float resourceWeight = 0.10f;
+    [Tooltip("Weight for recent combat events. Fighting just happened = elevated pressure.")]
+    [SerializeField] private float combatWeight = 0.10f;
 
-    [Tooltip("Weight for recent combat events. Fighting just happened = elevated tension.")]
-    [SerializeField] private float recentCombatWeight = 0.10f;
+    [Tooltip("Weight for average enemy density around heroes. Surrounded = exposed.")]
+    [SerializeField] private float exposureWeight = 0.10f;
 
-    // ─── Tuning parameters ───
+    [Header("Pressure Thresholds")]
 
-    [Header("Tuning")]
+    [Tooltip("Below this: Low pressure — escalation permitted.")]
+    [SerializeField] private float moderateThreshold = 0.25f;
 
-    [Tooltip("How fast the tension score lerps toward the raw calculated value. Higher = snappier response.")]
+    [Tooltip("Above this: Elevated pressure — soft stabilization begins.")]
+    [SerializeField] private float elevatedThreshold = 0.50f;
+
+    [Tooltip("Above this: Critical pressure — strong stabilization active.")]
+    [SerializeField] private float criticalThreshold = 0.70f;
+
+    [Header("Measurement Tuning")]
+
+    [Tooltip("How fast the pressure score lerps toward the raw value. Higher = snappier.")]
     [SerializeField] private float smoothingSpeed = 3f;
 
-    [Tooltip("How fast the combat spike decays per second. Lower = combat tension lingers longer.")]
-    [SerializeField] private float combatDecayRate = 0.2f;
+    [Tooltip("How fast combat intensity decays per second.")]
+    [SerializeField] private float combatDecayRate = 0.15f;
 
-    [Tooltip("Maximum distance (Manhattan) at which enemies still register as a proximity threat. Beyond this = 0 tension.")]
+    [Tooltip("Maximum distance (Manhattan) for proximity threat measurement.")]
     [SerializeField] private int maxThreatDistance = 8;
 
-    [Tooltip("Number of active blips that maxes out the hidden threat score.")]
+    [Tooltip("Active blips that max out the hidden threat score.")]
     [SerializeField] private int maxBlipThreatCount = 3;
 
-    // ─── Tension output ───
-    // These are the final computed values read by the debug UI and future systems.
+    [Tooltip("Average enemies within threat range per hero that maxes out exposure.")]
+    [SerializeField] private int maxExposurePerHero = 4;
 
-    // Smoothed final tension value (0-1), updated each frame
-    private float _tensionScore;
+    // ═══════════════════════════════════════════════════════════════
+    //  LAYER 2: Intervention Configuration
+    // ═══════════════════════════════════════════════════════════════
 
-    // Unsmoothed calculated tension, useful for debug comparison
-    private float _rawTension;
+    [Header("Layer 2: AI Behavior Modulation")]
 
-    // Current director state derived from tension thresholds
-    private DirectorState _currentState;
+    [Tooltip("Aggression multiplier at critical pressure (< 1.0 = more defensive AI).")]
+    [SerializeField] private float aggressionAtCritical = 0.4f;
 
-    // ─── Combat spike tracking ───
-    // Combat events cause an instant spike that decays over time,
-    // representing the lingering stress of a recent fight.
+    [Tooltip("Aggression multiplier at low pressure (> 1.0 = more aggressive AI).")]
+    [SerializeField] private float aggressionAtLow = 1.3f;
 
-    // Current combat spike intensity (0-1), decays each frame
-    private float _recentCombatIntensity;
+    [Header("Layer 2: Spawn Modulation")]
 
-    // ─── Baseline tracking ───
+    [Tooltip("Probability of skipping an individual spawn at elevated pressure.")]
+    [SerializeField, Range(0f, 1f)] private float spawnSkipChanceElevated = 0.3f;
 
-    // Number of heroes at level start, used to calculate loss ratio
+    [Tooltip("Probability of skipping an individual spawn at critical pressure.")]
+    [SerializeField, Range(0f, 1f)] private float spawnSkipChanceCritical = 0.6f;
+
+    [Header("Layer 2: Spawn Positioning")]
+
+    [Tooltip("Score bias for spawn tile selection. Positive = favor far tiles at high pressure.")]
+    [SerializeField] private float spawnDistanceBias = 30f;
+
+    [Header("Layer 2: Combat Dice Modulation")]
+
+    [Tooltip("Enemy melee dice adjustment at critical pressure. Negative = fewer dice = less lethal to heroes.")]
+    [SerializeField] private int meleeDiceAtCritical = -1;
+
+    [Tooltip("Enemy melee dice adjustment at low pressure. Positive = more dice = more lethal to heroes.")]
+    [SerializeField] private int meleeDiceAtLow = 1;
+
+    [Tooltip("Ranged hit threshold adjustment at critical pressure. Negative = easier for heroes to hit.")]
+    [SerializeField] private int hitThresholdAtCritical = -1;
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Internal State
+    // ═══════════════════════════════════════════════════════════════
+
+    private float _pressureScore;
+    private float _rawPressure;
+    private PressureLevel _pressureLevel;
+
+    // Per-component scores (0-1 each)
+    private float _proximityScore;
+    private float _outnumberedScore;
+    private float _hiddenThreatScore;
+    private float _heroLossScore;
+    private float _combatScore;
+    private float _exposureScore;
+
+    // Combat spike tracking — decays over time
+    private float _combatIntensity;
+
+    // Baseline
     private int _initialHeroCount;
-
-    // Whether we've captured the initial hero count yet
     private bool _initialized;
 
-    // ─── Per-factor scores ───
-    // Stored separately so the debug UI can display each factor's contribution.
+    // Timestamp for elapsed-time-based decay and smoothing
+    private float _lastRecalcTime;
 
-    // How close the nearest enemy is to any hero (1.0 = adjacent, 0.0 = far/none)
-    private float _proximityScore;
+    // ═══════════════════════════════════════════════════════════════
+    //  Public API — Layer 3 (Read-Only Measurement)
+    // ═══════════════════════════════════════════════════════════════
 
-    // How outnumbered the heroes are (0.0 = even or advantage, 1.0 = heavily outnumbered)
-    private float _outnumberedScore;
+    /// <summary>Smoothed aggregate pressure score (0-1).</summary>
+    public float PressureScore => _pressureScore;
 
-    // How many unrevealed blips are active on the board (0.0 = none, 1.0 = maxBlipThreatCount+)
-    private float _hiddenThreatScore;
+    /// <summary>Unsmoothed raw pressure for debug comparison.</summary>
+    public float RawPressure => _rawPressure;
 
-    // Fraction of starting heroes that have died (0.0 = no losses, 1.0 = all dead)
-    private float _heroLossScore;
+    /// <summary>Current pressure level derived from thresholds.</summary>
+    public PressureLevel CurrentPressureLevel => _pressureLevel;
 
-    // How depleted command points are (0.0 = full CP, 1.0 = no CP)
-    private float _resourceScore;
-
-    // Recent combat spike value after decay (0.0 = calm, 1.0 = just fought)
-    private float _combatScore;
-
-    // ─── Public API ───
-
-    /// <summary>The smoothed tension score (0-1). Main output of the director.</summary>
-    public float TensionScore => _tensionScore;
-
-    /// <summary>The raw unsmoothed tension score (0-1). Useful for debug comparison.</summary>
-    public float RawTension => _rawTension;
-
-    /// <summary>The director's current state assessment.</summary>
-    public DirectorState CurrentState => _currentState;
-
-    // Per-factor getters for the debug UI
+    // Per-factor getters for debug UI
     public float ProximityScore => _proximityScore;
     public float OutnumberedScore => _outnumberedScore;
     public float HiddenThreatScore => _hiddenThreatScore;
     public float HeroLossScore => _heroLossScore;
-    public float ResourceScore => _resourceScore;
     public float CombatScore => _combatScore;
+    public float ExposureScore => _exposureScore;
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Lifecycle
+    // ═══════════════════════════════════════════════════════════════
 
     void Awake()
     {
         Instance = this;
     }
 
-    void Update()
+    /// <summary>
+    /// Recalculates all pressure components and the aggregate score.
+    /// Called by game systems after state-changing events (actions, spawns, deaths, turn transitions)
+    /// instead of every frame — the game state only changes at discrete action points.
+    /// </summary>
+    public void RecalculatePressure()
     {
-        // Wait until heroes have actually spawned before measuring anything
+        // Lazy initialization — wait until heroes have spawned
         if (!_initialized)
         {
             if (UnitManager.Instance != null && UnitManager.Instance.SpawnedHeroes.Count > 0)
             {
                 _initialHeroCount = UnitManager.Instance.SpawnedHeroes.Count;
                 _initialized = true;
-                Debug.Log($"[Director] Initialized with {_initialHeroCount} heroes");
+                _lastRecalcTime = Time.time;
             }
-            else
+            else return;
+        }
+
+        float elapsed = Time.time - _lastRecalcTime;
+        _lastRecalcTime = Time.time;
+
+        // Decay combat intensity based on elapsed real time
+        _combatIntensity = Mathf.Max(0f, _combatIntensity - combatDecayRate * elapsed);
+
+        // Compute BFS distance maps per hero once — shared by Proximity and Exposure
+        var heroDistMaps = new List<Dictionary<Tile, int>>();
+        if (UnitManager.Instance != null)
+        {
+            foreach (var hero in UnitManager.Instance.SpawnedHeroes)
             {
-                return;
+                if (hero != null && hero.IsAlive && hero.OccupiedTile != null)
+                    heroDistMaps.Add(PathfindingUtils.ComputeDistanceMap(hero.OccupiedTile));
             }
         }
 
-        // Decay the combat spike over time
-        _recentCombatIntensity = Mathf.Max(0f, _recentCombatIntensity - combatDecayRate * Time.deltaTime);
+        // Calculate each pressure component
+        _proximityScore = CalcProximity(heroDistMaps);
+        _outnumberedScore = CalcOutnumbered();
+        _hiddenThreatScore = CalcHiddenThreats();
+        _heroLossScore = CalcHeroLoss();
+        _combatScore = _combatIntensity;
+        _exposureScore = CalcExposure(heroDistMaps);
 
-        // Calculate each factor
-        _proximityScore = CalcProximityScore();
-        _outnumberedScore = CalcOutnumberedScore();
-        _hiddenThreatScore = CalcHiddenThreatScore();
-        _heroLossScore = CalcHeroLossScore();
-        _resourceScore = CalcResourceScore();
-        _combatScore = _recentCombatIntensity;
-
-        // Combine weighted factors into raw tension
-        _rawTension = Mathf.Clamp01(
+        // Weighted aggregate
+        _rawPressure = Mathf.Clamp01(
             _proximityScore * proximityWeight +
             _outnumberedScore * outnumberedWeight +
             _hiddenThreatScore * hiddenThreatWeight +
             _heroLossScore * heroLossWeight +
-            _resourceScore * resourceWeight +
-            _combatScore * recentCombatWeight
+            _combatScore * combatWeight +
+            _exposureScore * exposureWeight
         );
 
-        // Smooth the tension score to prevent jitter
-        _tensionScore = Mathf.Lerp(_tensionScore, _rawTension, smoothingSpeed * Time.deltaTime);
+        // Smooth based on elapsed time — long pauses snap, rapid actions smooth
+        _pressureScore = Mathf.Lerp(_pressureScore, _rawPressure, Mathf.Clamp01(smoothingSpeed * elapsed));
 
-        // Determine director state from tension thresholds
-        _currentState = _tensionScore switch
+        // Classify pressure level
+        if (_pressureScore >= criticalThreshold)
+            _pressureLevel = PressureLevel.Critical;
+        else if (_pressureScore >= elevatedThreshold)
+            _pressureLevel = PressureLevel.Elevated;
+        else if (_pressureScore >= moderateThreshold)
+            _pressureLevel = PressureLevel.Moderate;
+        else
+            _pressureLevel = PressureLevel.Low;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Public API — Layer 2 (Intervention Queries)
+    //
+    //  These methods are called by other systems to get Director guidance.
+    //  They return modifiers, not commands — the calling system decides
+    //  how to apply them, preserving its own decision autonomy.
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Returns an aggression multiplier for enemy AI behaviors.
+    /// Below 1.0 at high pressure (more defensive), above 1.0 at low pressure (more aggressive).
+    /// Applied to BlipBehavior's aggression factor.
+    /// </summary>
+    public float GetAggressionModifier()
+    {
+        if (!_initialized) return 1f;
+        // Linearly interpolate: low pressure → aggressionAtLow, high pressure → aggressionAtCritical
+        return Mathf.Lerp(aggressionAtLow, aggressionAtCritical, _pressureScore);
+    }
+
+    /// <summary>
+    /// Returns whether an individual spawn should be skipped (probabilistic).
+    /// Used by EnemyAIManager per-spawn for granular control.
+    /// </summary>
+    public bool ShouldSkipSpawn()
+    {
+        float chance = _pressureLevel switch
         {
-            < 0.2f => DirectorState.Calm,
-            < 0.5f => DirectorState.Building,
-            < 0.75f => DirectorState.Escalating,
-            _ => DirectorState.Critical
+            PressureLevel.Critical => spawnSkipChanceCritical,
+            PressureLevel.Elevated => spawnSkipChanceElevated,
+            _ => 0f
+        };
+        return Random.value < chance;
+    }
+
+    /// <summary>
+    /// Returns a scoring bias for spawn tile selection.
+    /// Positive at high pressure: favors tiles far from heroes (less threatening spawns).
+    /// Negative at low pressure: favors tiles close to heroes (escalation).
+    /// Applied by UnitManager.ScoreSpawnTile().
+    /// </summary>
+    public float GetSpawnPositionBias()
+    {
+        return _pressureLevel switch
+        {
+            PressureLevel.Critical => spawnDistanceBias,
+            PressureLevel.Elevated => spawnDistanceBias * 0.5f,
+            PressureLevel.Low => -spawnDistanceBias * 0.3f,
+            _ => 0f
         };
     }
 
     /// <summary>
-    /// Call this after any melee combat resolution to spike combat tension.
-    /// The spike decays over time via combatDecayRate.
+    /// Returns an additive modifier to enemy melee dice count.
+    /// Negative at critical pressure (fewer enemy dice = less lethal to heroes).
+    /// Positive at low pressure (more enemy dice = harder for heroes).
+    /// Applied by MeleeAttackAbility.GetDiceCount() for enemy units only.
+    /// </summary>
+    public int GetMeleeDiceModifier()
+    {
+        if (!_initialized) return 0;
+        return _pressureLevel switch
+        {
+            PressureLevel.Critical => meleeDiceAtCritical,
+            PressureLevel.Low => meleeDiceAtLow,
+            _ => 0
+        };
+    }
+
+    /// <summary>
+    /// Returns an additive modifier to the ranged hit threshold.
+    /// Negative at critical pressure (lower threshold = easier for heroes to hit).
+    /// Applied by RangedAttackAbility before rolling dice.
+    /// </summary>
+    public int GetHitThresholdModifier()
+    {
+        if (!_initialized) return 0;
+        return _pressureLevel switch
+        {
+            PressureLevel.Critical => hitThresholdAtCritical,
+            _ => 0
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Event Registration
+    //
+    //  Called by combat systems to notify the Director of significant events.
+    //  These spike the combat intensity component, which then decays over time.
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Called after any combat resolution (melee, ranged, flamethrower).
+    /// Spikes combat intensity — multiple rapid events stack up to 1.0.
     /// </summary>
     public void RegisterCombatEvent()
     {
-        // Each combat event pushes the spike toward 1.0
-        // Multiple rapid events stack up to the cap
-        _recentCombatIntensity = Mathf.Min(1f, _recentCombatIntensity + 0.5f);
-        Debug.Log($"[Director] Combat event registered. Combat intensity: {_recentCombatIntensity:F2}");
+        _combatIntensity = Mathf.Min(1f, _combatIntensity + 0.4f);
+        RecalculatePressure();
     }
 
     /// <summary>
-    /// Call this when a hero dies. Spikes combat tension and updates loss tracking.
+    /// Called when a hero dies. Larger spike than regular combat.
     /// </summary>
     public void RegisterHeroDeath()
     {
-        // Hero death is a major combat event
-        _recentCombatIntensity = Mathf.Min(1f, _recentCombatIntensity + 0.8f);
-        Debug.Log($"[Director] Hero death registered. Combat intensity: {_recentCombatIntensity:F2}");
+        _combatIntensity = Mathf.Min(1f, _combatIntensity + 0.7f);
+        RecalculatePressure();
     }
 
-    // ─── Factor calculations ───
+    // ═══════════════════════════════════════════════════════════════
+    //  Layer 3: Pressure Component Calculations
+    //
+    //  Each method returns a 0-1 score for one aspect of player pressure.
+    //  These are pure measurements with no side effects.
+    // ═══════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Measures how close the nearest enemy is to any hero.
+    /// Closest targetable enemy distance to any hero.
     /// Adjacent (1 tile) = 1.0, beyond maxThreatDistance = 0.0.
-    /// Only counts enemies that are on the board (not on spawn tiles).
     /// </summary>
-    private float CalcProximityScore()
+    private float CalcProximity(List<Dictionary<Tile, int>> heroDistMaps)
     {
-        if (UnitManager.Instance == null)
-            return 0f;
+        if (UnitManager.Instance == null || heroDistMaps.Count == 0) return 0f;
 
-        var heroes = UnitManager.Instance.SpawnedHeroes;
         var enemies = UnitManager.Instance.SpawnedEnemies;
+        if (enemies.Count == 0) return 0f;
 
-        if (heroes.Count == 0 || enemies.Count == 0)
-            return 0f;
-
-        int closestDistance = int.MaxValue;
+        int closest = int.MaxValue;
 
         foreach (var enemy in enemies)
         {
-            if (enemy == null || !enemy.IsAlive || enemy.OccupiedTile == null)
+            if (enemy == null || !enemy.IsAlive || enemy.OccupiedTile == null || !enemy.IsTargetable)
                 continue;
 
-            // Skip enemies still on spawn tiles (not yet a real threat)
-            if (!enemy.IsTargetable)
-                continue;
-
-            foreach (var hero in heroes)
+            foreach (var distMap in heroDistMaps)
             {
-                if (hero == null || !hero.IsAlive || hero.OccupiedTile == null)
-                    continue;
-
-                int dist = PathfindingUtils.ManhattanDistance(enemy.OccupiedTile, hero.OccupiedTile);
-                if (dist < closestDistance)
-                    closestDistance = dist;
+                int dist = PathfindingUtils.GetPathDistance(enemy.OccupiedTile, distMap);
+                if (dist < closest) closest = dist;
             }
         }
 
-        if (closestDistance == int.MaxValue)
-            return 0f;
-
-        // Invert and normalize: distance 1 = 1.0, distance maxThreatDistance+ = 0.0
-        return Mathf.Clamp01(1f - (float)(closestDistance - 1) / (maxThreatDistance - 1));
+        if (closest == int.MaxValue) return 0f;
+        return Mathf.Clamp01(1f - (float)(closest - 1) / (maxThreatDistance - 1));
     }
 
     /// <summary>
-    /// Measures how outnumbered the heroes are.
     /// Ratio of targetable enemies to living heroes.
-    /// 1:1 = 0.25, 2:1 = 0.5, 3:1+ = 1.0.
+    /// Even numbers = 0.25, 2:1 = 0.5, 4:1+ = 1.0.
     /// </summary>
-    private float CalcOutnumberedScore()
+    private float CalcOutnumbered()
     {
-        if (UnitManager.Instance == null)
-            return 0f;
+        if (UnitManager.Instance == null) return 0f;
 
         int heroCount = UnitManager.Instance.SpawnedHeroes.Count(h => h != null && h.IsAlive);
-        if (heroCount == 0)
-            return 1f;
+        if (heroCount == 0) return 1f;
 
-        // Count targetable enemies only (excludes blips on spawn tiles)
-        int enemyCount = UnitManager.Instance.SpawnedEnemies.Count(e => e != null && e.IsAlive && e.IsTargetable);
+        int enemyCount = UnitManager.Instance.SpawnedEnemies
+            .Count(e => e != null && e.IsAlive && e.IsTargetable);
 
-        // Ratio: 0 enemies = 0, 1:1 = 0.25, 2:1 = 0.5, 3:1 = 0.75, 4:1+ = 1.0
-        float ratio = (float)enemyCount / heroCount;
-        return Mathf.Clamp01(ratio / 4f);
+        return Mathf.Clamp01((float)enemyCount / heroCount / 4f);
     }
 
     /// <summary>
-    /// Measures how many unrevealed blips are active on the board (not on spawn tiles).
-    /// These represent unknown threats the player can't fully account for.
+    /// Unrevealed blips that have left their spawn tile (active threats).
     /// 0 blips = 0.0, maxBlipThreatCount+ = 1.0.
     /// </summary>
-    private float CalcHiddenThreatScore()
+    private float CalcHiddenThreats()
     {
-        if (UnitManager.Instance == null)
-            return 0f;
+        if (UnitManager.Instance == null) return 0f;
 
-        int activeBlips = 0;
-
+        int blips = 0;
         foreach (var enemy in UnitManager.Instance.SpawnedEnemies)
         {
-            if (enemy is Enemy2 blip && !blip.IsRevealed && blip.IsAlive)
-            {
-                // Only count blips that have left their spawn tile (active threats)
-                if (blip.IsTargetable)
-                    activeBlips++;
-            }
+            if (enemy is Enemy2 blip && !blip.IsRevealed && blip.IsAlive && blip.IsTargetable)
+                blips++;
         }
 
-        return Mathf.Clamp01((float)activeBlips / maxBlipThreatCount);
+        return Mathf.Clamp01((float)blips / maxBlipThreatCount);
     }
 
     /// <summary>
-    /// Measures what fraction of the starting hero squad has been lost.
+    /// Fraction of the starting hero squad that has been lost.
     /// 0 losses = 0.0, all dead = 1.0.
     /// </summary>
-    private float CalcHeroLossScore()
+    private float CalcHeroLoss()
     {
-        if (_initialHeroCount <= 0)
-            return 0f;
+        if (_initialHeroCount <= 0) return 0f;
 
-        int currentHeroes = 0;
+        int current = 0;
         if (UnitManager.Instance != null)
-            currentHeroes = UnitManager.Instance.SpawnedHeroes.Count(h => h != null && h.IsAlive);
+            current = UnitManager.Instance.SpawnedHeroes.Count(h => h != null && h.IsAlive);
 
-        int losses = _initialHeroCount - currentHeroes;
+        int losses = _initialHeroCount - current;
         return Mathf.Clamp01((float)losses / _initialHeroCount);
     }
 
     /// <summary>
-    /// Measures how depleted the player's command points are.
-    /// Full CP = 0.0, no CP = 1.0.
+    /// Average number of targetable enemies within threat range per living hero.
+    /// Measures how "surrounded" the hero squad is.
+    /// 0 threats = 0.0, maxExposurePerHero+ average = 1.0.
     /// </summary>
-    private float CalcResourceScore()
+    private float CalcExposure(List<Dictionary<Tile, int>> heroDistMaps)
     {
-        if (GameManager.Instance == null || GameManager.Instance.MaxCommandPoints <= 0)
-            return 0f;
+        if (UnitManager.Instance == null || heroDistMaps.Count == 0) return 0f;
 
-        float cpRatio = (float)GameManager.Instance.CurrentCommandPoints / GameManager.Instance.MaxCommandPoints;
-        return Mathf.Clamp01(1f - cpRatio);
+        float totalThreats = 0f;
+
+        foreach (var distMap in heroDistMaps)
+        {
+            foreach (var enemy in UnitManager.Instance.SpawnedEnemies)
+            {
+                if (enemy == null || !enemy.IsAlive || enemy.OccupiedTile == null || !enemy.IsTargetable)
+                    continue;
+
+                int dist = PathfindingUtils.GetPathDistance(enemy.OccupiedTile, distMap);
+                if (dist <= maxThreatDistance)
+                    totalThreats++;
+            }
+        }
+
+        float avgThreats = totalThreats / heroDistMaps.Count;
+        return Mathf.Clamp01(avgThreats / maxExposurePerHero);
     }
 }

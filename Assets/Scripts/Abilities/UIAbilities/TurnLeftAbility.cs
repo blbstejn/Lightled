@@ -35,6 +35,12 @@ public class TurnLeftAbility : UntargetedAbility
         // Turning breaks sustained fire (changes line of sight)
         unit.BreakSustainedFire();
 
+        // Turning breaks overwatch
+        if (unit is BaseHero hero)
+        {
+            hero.BreakOverwatch();
+        }
+
         // Check if any blips are now revealed after turning
         Debug.Log($"[Turn Left] {unit.UnitName} turned left - checking blips for reveal");
         UnitManager.Instance.CheckAllBlipsForReveal();

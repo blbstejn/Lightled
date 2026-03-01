@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.40625, y: 1.40625, z: 1}
+  m_LocalScale: {x: 1.4754097, y: 1.4754097, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -81,8 +81,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: 5925523683700343950, guid: 489c8f4ee96b3d04baaba7f318b82933, type: 3}
-  m_Color: {r: 0.5, g: 0.8, b: 1, a: 1}
+  m_Sprite: {fileID: -6588234438219925006, guid: 699b5850d97021a4fbf1c500d9e51f3e, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -105,9 +105,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero2
   UnitName: Kunibert
+  title: 
+  description: 
   OccupiedTile: {fileID: 0}
   Faction: 0
-  maxHP: 10
   unitAbilities: []
   movementProfile:
     allowSideways: 1

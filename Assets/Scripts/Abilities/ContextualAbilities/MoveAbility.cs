@@ -25,6 +25,12 @@ public class MoveAbility : TargetedAbility
         // Moving breaks sustained fire - must chain ranged attacks to keep the bonus
         unit.BreakSustainedFire();
 
+        // Moving breaks overwatch
+        if (unit is BaseHero hero)
+        {
+            hero.BreakOverwatch();
+        }
+
         unit.MoveOneTile(TargetTile);
 
         // Mark that unit has moved this turn (enables free shooting)

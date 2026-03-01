@@ -6,7 +6,7 @@ public class FlamethrowerAbility : TargetedAbility
     public override string abilityName => "Flamethrower";
     public override int actionPointCost => 2;
 
-    [SerializeField] private int maxCharges = 6;
+    private readonly int maxCharges = 6;
     private int remainingCharges;
 
     public int RemainingCharges => remainingCharges;
@@ -21,7 +21,10 @@ public class FlamethrowerAbility : TargetedAbility
         if (unit == null || target == null)
             return false;
 
-        if (!unit.CanPay(actionPointCost))
+        int heroAP = unit.CurrentActionPoints;
+        int availableCP = GameManager.Instance != null ? GameManager.Instance.CurrentCommandPoints : 0;
+
+        if (heroAP < actionPointCost && (heroAP + availableCP) < actionPointCost)
             return false;
 
         if (remainingCharges <= 0)
@@ -52,7 +55,15 @@ public class FlamethrowerAbility : TargetedAbility
         if (unit is not BaseHero hero)
             return;
 
-        unit.SpendActionPoints(actionPointCost);
+        // Flamethrower breaks overwatch
+        hero.BreakOverwatch();
+
+        // Spend whatever AP the hero has (up to the cost); CP deficit is handled by Tile.OnPointerClick
+        int apToSpend = Mathf.Min(unit.CurrentActionPoints, actionPointCost);
+        if (apToSpend > 0)
+        {
+            unit.SpendActionPoints(apToSpend);
+        }
         remainingCharges--;
 
         // Get target tile + all 8 neighbors (9 tiles total)
@@ -67,6 +78,9 @@ public class FlamethrowerAbility : TargetedAbility
             if (tile.OccupiedUnit != null && tile.OccupiedUnit.IsAlive)
             {
                 BaseUnit targetUnit = tile.OccupiedUnit;
+
+                // Flash the target to show they're being attacked
+                targetUnit.FlashHit();
 
                 // Roll 2+ on d6 to kill
                 int roll = Random.Range(1, 7);
@@ -110,6 +124,11 @@ public class FlamethrowerAbility : TargetedAbility
 
         CombatDebugLog.LogFlamethrower(hero.UnitName, affectedTiles.Count, remainingCharges, maxCharges);
         Debug.Log($"[Flamethrower] Attack complete. Killed {killed} units. Permanent fire on center, flash on {affectedTiles.Count - 1} neighbors.");
+
+        // Check for FlamethrowerTarget victory condition
+        GameManager.Instance.CheckFlamethrowerVictory(affectedTiles);
+
+        DirectorAI.Instance?.RegisterCombatEvent();
     }
 
     private HashSet<Tile> GetAffectedTiles(Tile center)

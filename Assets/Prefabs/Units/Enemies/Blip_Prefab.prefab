@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2.0930233, y: 2.0930233, z: 1}
+  m_LocalScale: {x: 1.9148936, y: 1.9148936, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -81,7 +81,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: 2042143870796837260, guid: e4c5e09ac54217e41ade9780222ce4d1, type: 3}
+  m_Sprite: {fileID: 8004331584419127093, guid: ce211e7286a0f014eb291b793ceddf3d, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -105,9 +105,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy2
   UnitName: Blip
+  title: 
+  description: 
   OccupiedTile: {fileID: 0}
   Faction: 1
-  maxHP: 1
   unitAbilities: []
   movementProfile:
     allowSideways: 1
@@ -115,6 +116,7 @@ MonoBehaviour:
     backwardCost: 2
   moveSpeed: 5
   facing: 0
+  aiBehavior: {fileID: 0}
   ghoulPrefab: {fileID: 2181189450159112630, guid: 180d7d8db17a0ed4caac63ae5e111299, type: 3}
   minGhouls: 1
   maxGhouls: 3

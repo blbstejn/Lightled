@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -20,6 +21,9 @@ public class GameManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        // Ensure OverwatchManager exists
+        EnsureOverwatchManager();
+
         // Check if a level was selected from the main menu
         if (LevelLoader.SelectedLevel != null)
         {
@@ -28,7 +32,23 @@ public class GameManager : MonoBehaviour
             LevelLoader.SelectedLevel = null; // Clear after loading
         }
 
+        // Reset escape tracking for fresh start
+        UnitManager.Instance.ClearEscapedHeroes();
+
         ChangeState(GameState.GenerateGrid);
+    }
+
+    /// <summary>
+    /// Creates OverwatchManager if it doesn't exist in the scene.
+    /// </summary>
+    private void EnsureOverwatchManager()
+    {
+        if (OverwatchManager.Instance == null)
+        {
+            var overwatchManagerObj = new GameObject("OverwatchManager");
+            overwatchManagerObj.AddComponent<OverwatchManager>();
+            Debug.Log("[GameManager] Created OverwatchManager");
+        }
     }
 
     public void ChangeState(GameState newState)
@@ -74,6 +94,9 @@ public class GameManager : MonoBehaviour
             hero.StartNewTurn();
         }
 
+        // Recalculate Director pressure at turn start (picks up all hero-turn changes)
+        DirectorAI.Instance?.RecalculatePressure();
+
         Debug.Log($"Hero turn started - CP reset to {CurrentCommandPoints}, AP refreshed for all heroes.");
 
         // Check if any blips are visible at the start of the turn
@@ -117,14 +140,20 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("Enemy turn complete.");
 
-        // Check defeat condition first (all heroes dead)
-        CheckDefeatCondition();
-        if (GameState == GameState.Defeat)
-            return;
+        // Clear fire effects at end of enemy turn
+        if (FireEffectManager.Instance != null)
+        {
+            FireEffectManager.Instance.ClearAllFire();
+        }
 
-        // Check victory condition (hero on target tile survived)
+        // Check victory first (for Escape mode, this also processes escapes)
         CheckVictoryCondition();
         if (GameState == GameState.Victory)
+            return;
+
+        // Check defeat condition (all heroes dead/gone without victory)
+        CheckDefeatCondition();
+        if (GameState == GameState.Defeat)
             return;
 
         // Continue to next hero turn
@@ -160,44 +189,106 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void OnHeroReachedTarget(BaseUnit hero)
     {
-        bool requiresArtifact = CurrentLevel != null && CurrentLevel.requiresArtifact;
+        if (CurrentLevel == null) return;
 
-        if (requiresArtifact && hero.HasArtifact)
+        switch (CurrentLevel.victoryConditionType)
         {
-            Debug.Log($"{hero.UnitName} has reached the target with the artifact! Survive the enemy turn to win!");
-        }
-        else if (!requiresArtifact)
-        {
-            Debug.Log($"{hero.UnitName} has reached the target! Survive the enemy turn to win!");
+            case VictoryConditionType.Escape:
+                Debug.Log($"{hero.UnitName} is on the escape zone! They will escape at the end of the enemy turn.");
+                break;
+
+            case VictoryConditionType.FlamethrowerTarget:
+                break;
         }
     }
 
     /// <summary>
     /// Called at the end of the enemy turn to check if the win condition is met.
-    /// If level requires artifact: hero with artifact must be alive on target tile.
-    /// If level doesn't require artifact: any hero on target tile wins.
+    /// Dispatches to the appropriate check based on LevelData.victoryConditionType.
     /// </summary>
     public void CheckVictoryCondition()
     {
-        bool requiresArtifact = CurrentLevel != null && CurrentLevel.requiresArtifact;
+        if (CurrentLevel == null)
+        {
+            CheckVictoryCondition_Escape();
+            return;
+        }
 
+        switch (CurrentLevel.victoryConditionType)
+        {
+            case VictoryConditionType.Escape:
+                CheckVictoryCondition_Escape();
+                break;
+            case VictoryConditionType.FlamethrowerTarget:
+                // Checked at ability execution time via CheckFlamethrowerVictory()
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Escape mode: heroes on target tiles at end of enemy turn are removed from play.
+    /// Victory when required escapee count is reached (or artifact carrier escapes if required).
+    /// </summary>
+    private void CheckVictoryCondition_Escape()
+    {
+        int requiredEscapees = CurrentLevel != null ? CurrentLevel.requiredEscapees : 1;
+
+        // Find heroes currently on target tiles and escape them
+        var heroesToEscape = new List<BaseHero>();
         foreach (var hero in UnitManager.Instance.SpawnedHeroes)
         {
-            if (!hero.IsAlive || !(hero.OccupiedTile is TargetTile))
-                continue;
+            if (hero.IsAlive && hero.OccupiedTile is TargetTile)
+                heroesToEscape.Add(hero);
+        }
 
-            // Check if victory conditions are met
-            if (requiresArtifact)
+        // Process escapes (iterate copy since EscapeHero modifies SpawnedHeroes)
+        foreach (var hero in heroesToEscape)
+        {
+            UnitManager.Instance.EscapeHero(hero);
+        }
+
+        // Update escape progress UI
+        if (heroesToEscape.Count > 0 && InGameUIManager.Instance != null)
+        {
+            InGameUIManager.Instance.UpdateEscapeProgress(
+                UnitManager.Instance.EscapedHeroCount, requiredEscapees);
+        }
+
+        // Check victory
+        if (CurrentLevel != null && CurrentLevel.requiresArtifact)
+        {
+            // Artifact mode: victory only when artifact carrier has escaped
+            if (UnitManager.Instance.ArtifactCarrierEscaped)
             {
-                if (hero.HasArtifact)
-                {
-                    ChangeState(GameState.Victory);
-                    return;
-                }
+                Debug.Log($"[Victory] Artifact carrier has escaped!");
+                ChangeState(GameState.Victory);
             }
-            else
+        }
+        else
+        {
+            // Standard escape: need minimum number of escapees
+            if (UnitManager.Instance.EscapedHeroCount >= requiredEscapees)
             {
-                // No artifact required - just reaching target is enough
+                Debug.Log($"[Victory] {UnitManager.Instance.EscapedHeroCount}/{requiredEscapees} heroes escaped!");
+                ChangeState(GameState.Victory);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called by FlamethrowerAbility when it fires. If the level uses FlamethrowerTarget
+    /// victory type and any affected tile is a TargetTile, trigger instant victory.
+    /// </summary>
+    public void CheckFlamethrowerVictory(HashSet<Tile> affectedTiles)
+    {
+        if (CurrentLevel == null || CurrentLevel.victoryConditionType != VictoryConditionType.FlamethrowerTarget)
+            return;
+
+        foreach (var tile in affectedTiles)
+        {
+            if (tile is TargetTile)
+            {
+                Debug.Log($"[Victory] Flamethrower hit target tile at ({tile.X},{tile.Y})! Instant victory!");
                 ChangeState(GameState.Victory);
                 return;
             }
@@ -205,22 +296,58 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Called when a hero dies. Triggers defeat if all heroes are dead.
+    /// Called when a hero dies. Triggers defeat if all on-board heroes are gone.
+    /// In Escape mode: checks if escape conditions were already met before declaring defeat.
     /// </summary>
     public void CheckDefeatCondition()
     {
-        // Check if any heroes are still alive
-        if (UnitManager.Instance.SpawnedHeroes.Count == 0)
+        if (UnitManager.Instance.SpawnedHeroes.Count > 0)
+            return;
+
+        // All on-board heroes are gone. Check if Escape mode victory was achieved.
+        if (CurrentLevel != null && CurrentLevel.victoryConditionType == VictoryConditionType.Escape)
         {
-            ChangeState(GameState.Defeat);
+            if (CurrentLevel.requiresArtifact)
+            {
+                if (UnitManager.Instance.ArtifactCarrierEscaped)
+                {
+                    Debug.Log("[Victory] All on-board heroes gone, but artifact carrier escaped!");
+                    ChangeState(GameState.Victory);
+                    return;
+                }
+            }
+            else
+            {
+                if (UnitManager.Instance.EscapedHeroCount >= CurrentLevel.requiredEscapees)
+                {
+                    Debug.Log("[Victory] All on-board heroes gone, but enough heroes escaped!");
+                    ChangeState(GameState.Victory);
+                    return;
+                }
+            }
         }
+
+        ChangeState(GameState.Defeat);
     }
 
     private void OnVictory()
     {
-        Debug.Log("VICTORY! The artifact has been secured!");
+        string message = "VICTORY!";
+        if (CurrentLevel != null)
+        {
+            switch (CurrentLevel.victoryConditionType)
+            {
+                case VictoryConditionType.Escape:
+                    message = $"VICTORY! {UnitManager.Instance.EscapedHeroCount} heroes escaped!";
+                    break;
+                case VictoryConditionType.FlamethrowerTarget:
+                    message = "VICTORY! Target destroyed by flamethrower!";
+                    break;
+            }
+        }
 
-        // Show victory UI
+        Debug.Log(message);
+
         if (InGameUIManager.Instance != null)
         {
             InGameUIManager.Instance.ShowVictoryScreen();

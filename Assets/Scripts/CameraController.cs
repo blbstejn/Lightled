@@ -16,7 +16,7 @@ public class CameraController : MonoBehaviour
     [SerializeField] private bool enableRightMousePan = true;
 
     [Header("Zoom Settings")]
-    [SerializeField] private float zoomSpeed = 2f;
+    [SerializeField] private float zoomSpeed = 10f;
     [SerializeField] private float minZoom = 3f;
     [SerializeField] private float maxZoom = 15f;
 

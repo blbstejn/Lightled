@@ -4,6 +4,11 @@ using UnityEngine;
 
 public class Hero3 : BaseHero
 {
+    /// <summary>
+    /// Flamethrower hero cannot use Overwatch ability.
+    /// </summary>
+    protected override bool CanUseOverwatch => false;
+
     public override void Awake()
     {
         base.Awake();

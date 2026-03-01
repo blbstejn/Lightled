@@ -63,6 +63,10 @@ public class InGameUIManager : MonoBehaviour
     private float _turnTimeRemaining;
     private bool _isTimerActive;
 
+    // Escape progress
+    private GameObject _escapeProgressPanel;
+    private TextMeshProUGUI _escapeProgressText;
+
     void Awake()
     {
         Instance = this;
@@ -87,6 +91,9 @@ public class InGameUIManager : MonoBehaviour
 
         // Setup tooltip
         SetupTooltip();
+
+        // Setup escape progress UI (for Escape mode levels)
+        SetupEscapeProgressUI();
     }
 
     void Update()
@@ -95,6 +102,12 @@ public class InGameUIManager : MonoBehaviour
         if (_currentHero != null && heroStatsPanel != null && heroStatsPanel.activeSelf)
         {
             UpdateHeroStats();
+        }
+
+        // Continuously refresh tooltip AP if showing
+        if (_tooltipTarget != null && _tooltipPanel != null && _tooltipPanel.activeSelf && _tooltipAPText != null)
+        {
+            _tooltipAPText.text = $"AP: {_tooltipTarget.CurrentActionPoints}/{_tooltipTarget.MaxActionPoints}";
         }
 
         // Update command points display
@@ -953,6 +966,77 @@ public class InGameUIManager : MonoBehaviour
 
     #endregion
 
+    #region Escape Progress
+
+    /// <summary>
+    /// Sets up escape progress UI if this is an Escape-type level.
+    /// </summary>
+    private void SetupEscapeProgressUI()
+    {
+        LevelData currentLevel = GameManager.Instance?.CurrentLevel;
+        if (currentLevel == null || currentLevel.victoryConditionType != VictoryConditionType.Escape)
+            return;
+
+        CreateEscapeProgressProgrammatically();
+        UpdateEscapeProgress(0, currentLevel.requiredEscapees);
+    }
+
+    private void CreateEscapeProgressProgrammatically()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+            canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null)
+            return;
+
+        // Create panel at top-center of screen
+        GameObject panelObj = new GameObject("EscapeProgressPanel", typeof(RectTransform));
+        panelObj.transform.SetParent(canvas.transform, false);
+        _escapeProgressPanel = panelObj;
+
+        RectTransform panelRect = panelObj.GetComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.5f, 1f);
+        panelRect.anchorMax = new Vector2(0.5f, 1f);
+        panelRect.pivot = new Vector2(0.5f, 1f);
+        panelRect.anchoredPosition = new Vector2(0, -10);
+        panelRect.sizeDelta = new Vector2(250, 40);
+
+        Image panelBg = panelObj.AddComponent<Image>();
+        panelBg.color = new Color(0.1f, 0.1f, 0.3f, 0.85f);
+
+        GameObject textObj = new GameObject("ProgressText", typeof(RectTransform));
+        textObj.transform.SetParent(panelObj.transform, false);
+
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
+        textRect.offsetMin = new Vector2(8, 4);
+        textRect.offsetMax = new Vector2(-8, -4);
+
+        _escapeProgressText = textObj.AddComponent<TextMeshProUGUI>();
+        _escapeProgressText.fontSize = 18;
+        _escapeProgressText.color = Color.white;
+        _escapeProgressText.alignment = TextAlignmentOptions.Center;
+        _escapeProgressText.text = "Escaped: 0/1";
+    }
+
+    /// <summary>
+    /// Updates the escape progress display for Escape-type levels.
+    /// </summary>
+    public void UpdateEscapeProgress(int escapedCount, int requiredCount)
+    {
+        if (_escapeProgressText == null)
+            return;
+
+        _escapeProgressText.text = $"Escaped: {escapedCount}/{requiredCount}";
+        _escapeProgressText.color = escapedCount >= requiredCount
+            ? new Color(0.2f, 1f, 0.2f)
+            : Color.white;
+    }
+
+    #endregion
+
     #region Victory/Defeat Screens
 
     /// <summary>
@@ -1036,6 +1120,10 @@ public class InGameUIManager : MonoBehaviour
         if (turnControlsPanel != null)
         {
             turnControlsPanel.SetActive(false);
+        }
+        if (_escapeProgressPanel != null)
+        {
+            _escapeProgressPanel.SetActive(false);
         }
     }
 

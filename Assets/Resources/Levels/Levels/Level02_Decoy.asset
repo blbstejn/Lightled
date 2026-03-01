@@ -14,8 +14,49 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   levelName: Decoy
   levelNumber: 2
+  description: 'Making your way through the tunnel, you find yourself surrounded
+    by more and more ghouls.
+
+
+    Try to escape and rescue as many knights as possible.
+
+
+    The
+    goal of this level is to evacuate as many of your units at the target tile as
+    possible.'
   gridRows:
-  - 
+  - '               #####               '
+  - '               B...B               '
+  - '               ##.##               '
+  - '                #.#                '
+  - '                #.#                '
+  - '                #.#                '
+  - '                #.#                '
+  - '                #.#                '
+  - '                #.#                '
+  - '                #.#         #B#    '
+  - '          #######.###########.#    '
+  - '          #54321..............#    '
+  - '          #######.####.########    '
+  - '                #.####.#           '
+  - '                #......#           '
+  - '#####           #.####.#           '
+  - '#...#####       #.#  #.#           '
+  - '#.......B       #.#  #.#           '
+  - '#...#####       #.#  #.#       #B# '
+  - '##.##           #.#  #.#    ####.##'
+  - ' #.#            #.#  #.#    #.....B'
+  - ' #.#           ##.####.##   #.##.##'
+  - '##.#############...##...#####.##.# '
+  - 'B................................# '
+  - '##.######.######...##...########## '
+  - ' #.#    #.#    ##########          '
+  - ' #.#    #.#                        '
+  - '##.##   #.#                        '
+  - '#...#####.##                       '
+  - '#.........T#                       '
+  - '#...########                       '
+  - '#####                              '
   walkableChar: 46
   wallChar: 35
   voidChar: 32
@@ -23,4 +64,6 @@ MonoBehaviour:
   blipSpawnChar: 66
   artifactChar: 65
   targetChar: 84
+  victoryConditionType: 0
   requiresArtifact: 0
+  requiredEscapees: 1

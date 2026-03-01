@@ -209,12 +209,14 @@ public class GridManager : MonoBehaviour
     public void ShowImmediateMoveOptions(BaseUnit unit)
     {
         ClearMoveHighlights();
-        
+
         Tile origin = unit.OccupiedTile;
+        int availableCP = GameManager.Instance != null ? GameManager.Instance.CurrentCommandPoints : 0;
 
         foreach (Tile neighbour in GetNeighbours(origin))
         {
-            if (unit.CanMoveTo(neighbour))
+            int cost = unit.GetMoveCost(neighbour);
+            if (cost <= unit.CurrentActionPoints + availableCP)
             {
                 neighbour.GetComponent<SpriteRenderer>().color = reachableTileColor;
                 _highlightedTiles.Add(neighbour);

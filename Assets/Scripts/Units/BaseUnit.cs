@@ -23,6 +23,14 @@ public class MovementProfile
 public class BaseUnit : MonoBehaviour
 {
     public string UnitName;
+
+    [Tooltip("Short role or rank shown beneath the name in the unit roster (e.g. 'Flamethrower Specialist').")]
+    public string title;
+
+    [TextArea(2, 4)]
+    [Tooltip("Flavour / lore description shown in the unit roster.")]
+    public string description;
+
     public Tile OccupiedTile;
     public Faction Faction;
 
@@ -47,7 +55,7 @@ public class BaseUnit : MonoBehaviour
     [Header("Movement")]
     [SerializeField] protected MovementProfile movementProfile;
     [SerializeField] protected float moveSpeed = 5f;
-    public bool IsMoving { get; private set; }
+    public bool IsMoving { get; protected set; }
     public bool HasMovedThisTurn { get; private set; }
 
     [Header("Facing")]
@@ -72,11 +80,14 @@ public class BaseUnit : MonoBehaviour
             collider.enabled = false;
     }
 
-    public void StartNewTurn()
+    public virtual void StartNewTurn()
     {
         CurrentActionPoints = MaxActionPoints;
         HasMovedThisTurn = false;
         SustainedFireTarget = null;
+
+        // Refresh UI to show updated stats
+        InGameUIManager.Instance?.RefreshUnitInfo(this);
     }
 
     public void SetHasMoved()
@@ -263,6 +274,9 @@ public class BaseUnit : MonoBehaviour
     public void SetActionPoints(int amount)
     {
         CurrentActionPoints = Mathf.Clamp(amount, 0, MaxActionPoints);
+
+        // Refresh UI to show updated stats
+        InGameUIManager.Instance?.RefreshUnitInfo(this);
     }
 
     public void SpendActionPoints(int amount)
@@ -289,6 +303,31 @@ public class BaseUnit : MonoBehaviour
 
         _isAlive = false;
         Die(killer);
+    }
+
+    /// <summary>
+    /// Flashes the sprite white briefly to indicate being attacked.
+    /// </summary>
+    public void FlashHit(float duration = 0.1f)
+    {
+        var spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            StartCoroutine(FlashCoroutine(spriteRenderer, duration));
+        }
+    }
+
+    private IEnumerator FlashCoroutine(SpriteRenderer spriteRenderer, float duration)
+    {
+        Color originalColor = spriteRenderer.color;
+        spriteRenderer.color = Color.white;
+        yield return new WaitForSeconds(duration);
+
+        // Only restore if still alive (don't flash back if killed)
+        if (IsAlive && spriteRenderer != null)
+        {
+            spriteRenderer.color = originalColor;
+        }
     }
 
     #endregion

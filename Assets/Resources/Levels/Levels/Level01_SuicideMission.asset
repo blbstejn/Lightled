@@ -14,9 +14,47 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   levelName: Suicide Mission
   levelNumber: 1
-  description: Enter level description here...
+  description: 'The crusade has failed.
+
+    Our 5 heroes now find themselves deep
+    in the catacombs.
+
+    Take the first steps to get out of this cursed place.
+
+
+    Use
+    this first mission to get used to the different abilities and mechanics you will
+    be confronted with during this game.
+
+
+    The mission goal to shoot a flamethrower
+    at one of the target tiles.'
   gridRows:
-  - 
+  - '                   #####     '
+  - '                   #TTT#     '
+  - '                   #TTT#     '
+  - '                   #TTT#     '
+  - '                   ##.##     '
+  - '                    #.#      '
+  - '                    #.#      '
+  - '                    #.#      '
+  - '                    #.#   #B#'
+  - '              #######.#####.#'
+  - '              #.............#'
+  - '      #####   #.#####.#####.#'
+  - '#######...#####.#####.#####.#'
+  - '#54321......................#'
+  - '#######...###########.#####.#'
+  - '      ##.##         #.#   #B#'
+  - '       #.#          #.#      '
+  - '       #.#          #.#      '
+  - '       #.#          #.#      '
+  - '       #.#          #.#      '
+  - '      ##.##B#      ##.##     '
+  - '      #...#.#      B...B     '
+  - '      #.....#      #####     '
+  - '      #...#.#                '
+  - '      #####B#                '
   walkableChar: 46
   wallChar: 35
   voidChar: 32
@@ -24,4 +62,6 @@ MonoBehaviour:
   blipSpawnChar: 66
   artifactChar: 65
   targetChar: 84
+  victoryConditionType: 1
   requiresArtifact: 0
+  requiredEscapees: 1
