@@ -104,9 +104,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5e6f7890123456789abcdef02030405, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero5
-  UnitName: Norbert
-  title: The Flickering
-  description: 
+  UnitName: Vorath, Last of His Order
+  title: The Defector
+  description: "He once belonged to a different order \u2014 one that made its pacts
+    with the necromancer. What drove him to switch sides, he does not say. But he
+    knows these catacombs better than anyone. That will have to be enough."
   OccupiedTile: {fileID: 0}
   Faction: 0
   unitAbilities: []

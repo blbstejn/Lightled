@@ -104,9 +104,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2b3c4d5e6f7890123456789abcdef02, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero2
-  UnitName: Kunibert
-  title: The Steadfast
-  description: 
+  UnitName: Edric the Pale
+  title: The Watcher
+  description: "A former intelligence agent of the crusade. He sees more than the
+    others and speaks less. Nobody knows exactly whose side he was originally on
+    \u2014 but down here, everyone is on the same side."
   OccupiedTile: {fileID: 0}
   Faction: 0
   unitAbilities: []

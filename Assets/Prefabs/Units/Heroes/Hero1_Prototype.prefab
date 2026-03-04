@@ -104,9 +104,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f13d8d156816dea4eaa9bec4e2ed4a0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero1
-  UnitName: Herbert
-  title: The Bronze Bull
-  description: 
+  UnitName: Mira "Ironfist" Vrond
+  title: The Breacher
+  description: "Once a smith for the crusade's fleet. Rough, loud, unstoppable. Where
+    others hesitate, she advances \u2014 and whatever stood before her does not stand
+    after."
   OccupiedTile: {fileID: 0}
   Faction: 0
   unitAbilities: []

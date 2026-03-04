@@ -104,9 +104,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4d5e6f7890123456789abcdef020304, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero4
-  UnitName: Gilbert
-  title: The Swamp Knight
-  description: 
+  UnitName: Aldwin of the Silent Quill
+  title: The Cartographer
+  description: "He maps every corridor, every trap, every fallen brother. Not out
+    of duty \u2014 he simply cannot stop. As long as he writes, he believes someone
+    will one day read it."
   OccupiedTile: {fileID: 0}
   Faction: 0
   unitAbilities: []

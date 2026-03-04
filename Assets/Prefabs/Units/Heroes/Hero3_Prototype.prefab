@@ -104,9 +104,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3c4d5e6f7890123456789abcdef0203, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero3
-  UnitName: Flammenwerferbert
-  title: The Blinding Blaze
-  description: 
+  UnitName: Ser Kaelen, the Kindled
+  title: The Consecrated
+  description: "They say the goddess touched him \u2014 perhaps a little too firmly.
+    He carries burning grenades, thrown with bare hands. His body burns, his faith
+    burns, his patience burns. The only thing that doesn't burn is his loyalty."
   OccupiedTile: {fileID: 0}
   Faction: 0
   unitAbilities: []
