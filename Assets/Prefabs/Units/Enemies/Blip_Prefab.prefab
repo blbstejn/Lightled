@@ -105,8 +105,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy2
   UnitName: Blip
-  title: 
-  description: 
+  title: The Desperate Message
+  description: 'Our goddess constantly fights the necromancer''s powers.
+
+    Despite
+    her valiant effort, she can still show you where his evil forces approach. If
+    not how many - at least where.'
   OccupiedTile: {fileID: 0}
   Faction: 1
   unitAbilities: []

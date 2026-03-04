@@ -54,7 +54,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8678342889068418530, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
       propertyPath: m_Color.b
-      value: 0.23584908
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8678342889068418530, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
       propertyPath: m_Color.g
@@ -62,7 +62,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8678342889068418530, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
       propertyPath: m_Color.r
-      value: 0.027526552
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -94,10 +94,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64152a14f3fe82f418b0964b2dfa88f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VoidTile
-  _renderer: {fileID: 2477229181987306813}
   _highlight: {fileID: 8372291005839668886}
+  _isWalkable: 0
+  _renderer: {fileID: 2477229181987306813}
+  _overlayRenderer: {fileID: 8840737378529259049}
+  OccupiedUnit: {fileID: 0}
 --- !u!1 &8372291005839668886 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3332402589724909129, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+  m_PrefabInstance: {fileID: 6489484960643180767}
+  m_PrefabAsset: {fileID: 0}
+--- !u!212 &8840737378529259049 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 2359837819412760310, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
   m_PrefabInstance: {fileID: 6489484960643180767}
   m_PrefabAsset: {fileID: 0}

@@ -105,7 +105,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero1
   UnitName: Herbert
-  title: 
+  title: The Bronze Bull
   description: 
   OccupiedTile: {fileID: 0}
   Faction: 0

@@ -105,7 +105,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero2
   UnitName: Kunibert
-  title: 
+  title: The Steadfast
   description: 
   OccupiedTile: {fileID: 0}
   Faction: 0

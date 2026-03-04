@@ -42,10 +42,15 @@ public abstract class Tile : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 		Y = y;
 	}
 
-	public void Highlight(bool active)
+	public void Highlight(bool active, Color? color = null)
 	{
-		if (_highlight != null)
-			_highlight.SetActive(active);
+		if (_highlight == null) return;
+		_highlight.SetActive(active);
+		if (active && color.HasValue)
+		{
+			var sr = _highlight.GetComponent<SpriteRenderer>();
+			if (sr != null) sr.color = color.Value;
+		}
 	}
 
 	public virtual void OnPointerEnter(PointerEventData eventData)
@@ -204,9 +209,10 @@ public abstract class Tile : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 	{
 		if (unit.OccupiedTile != null)
 			unit.OccupiedTile.OccupiedUnit = null;
-		
+
 		unit.transform.position = this.transform.position;
 		this.OccupiedUnit = unit;
 		unit.OccupiedTile = this;
 	}
+
 }

@@ -105,7 +105,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hero5
   UnitName: Norbert
-  title: 
+  title: The Flickering
   description: 
   OccupiedTile: {fileID: 0}
   Faction: 0

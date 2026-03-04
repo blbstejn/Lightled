@@ -105,8 +105,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy1
   UnitName: Ghoul
-  title: 
-  description: 
+  title: The Undead Horde
+  description: 'Devilishly fast undead with razor sharp claws that punch even through
+    the hardest of armors.
+
+    Keep them away from the knights, for meeting them
+    face to face is death assured.'
   OccupiedTile: {fileID: 0}
   Faction: 1
   unitAbilities: []

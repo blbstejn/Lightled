@@ -52,6 +52,50 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5166707616675892131, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.99769807
+      objectReference: {fileID: 0}
+    - target: {fileID: 5166707616675892131, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.9990681
+      objectReference: {fileID: 0}
+    - target: {fileID: 5166707616675892131, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.0022
+      objectReference: {fileID: 0}
+    - target: {fileID: 5166707616675892131, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5714275977376082295, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_Size.x
+      value: 1.0155312
+      objectReference: {fileID: 0}
+    - target: {fileID: 5714275977376082295, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_Size.y
+      value: 1.0147598
+      objectReference: {fileID: 0}
+    - target: {fileID: 5714275977376082295, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_Offset.x
+      value: -0.00089269876
+      objectReference: {fileID: 0}
+    - target: {fileID: 5714275977376082295, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_Offset.y
+      value: -0.0012784004
+      objectReference: {fileID: 0}
+    - target: {fileID: 5714275977376082295, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5714275977376082295, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8678342889068418530, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 3178791801905728931, guid: 21422cabcc9b96e4b8e289f8b3c7526f, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -85,9 +129,13 @@ MonoBehaviour:
   _highlight: {fileID: 1328037658611940113}
   _isWalkable: 1
   _renderer: {fileID: 4917538995656143034}
+  _overlayRenderer: {fileID: 2084852954491495342}
   OccupiedUnit: {fileID: 0}
-  _baseColor: {r: 0.7735849, g: 0.7735849, b: 0.7735849, a: 1}
-  _offsetColor: {r: 0.5754717, g: 0.5754717, b: 0.5754717, a: 1}
+--- !u!212 &2084852954491495342 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 2359837819412760310, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}
+  m_PrefabInstance: {fileID: 4346309305943909720}
+  m_PrefabAsset: {fileID: 0}
 --- !u!212 &4917538995656143034 stripped
 SpriteRenderer:
   m_CorrespondingSourceObject: {fileID: 8678342889068418530, guid: 14146b97795e7264dbd23bdfb16350ef, type: 3}

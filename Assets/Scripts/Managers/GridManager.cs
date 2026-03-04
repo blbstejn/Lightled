@@ -218,7 +218,7 @@ public class GridManager : MonoBehaviour
             int cost = unit.GetMoveCost(neighbour);
             if (cost <= unit.CurrentActionPoints + availableCP)
             {
-                neighbour.GetComponent<SpriteRenderer>().color = reachableTileColor;
+                neighbour.Highlight(true, reachableTileColor);
                 _highlightedTiles.Add(neighbour);
             }
         }
@@ -227,7 +227,7 @@ public class GridManager : MonoBehaviour
     public void ClearMoveHighlights()
     {
         foreach (Tile tile in _highlightedTiles)
-            tile.GetComponent<SpriteRenderer>().color = tile.OriginalColor;
+            tile.Highlight(false);
 
         _highlightedTiles.Clear();
     }
@@ -418,7 +418,7 @@ public class GridManager : MonoBehaviour
 
         foreach (Tile tile in hero.GetLineOfSightTiles())
         {
-            tile.GetComponent<SpriteRenderer>().color = _lineOfSightColor;
+            tile.Highlight(true, _lineOfSightColor);
             _losTiles.Add(tile);
         }
     }
@@ -426,7 +426,7 @@ public class GridManager : MonoBehaviour
     public void ClearLineOfSight()
     {
         foreach (Tile tile in _losTiles)
-            tile.GetComponent<SpriteRenderer>().color = tile.OriginalColor;
+            tile.Highlight(false);
 
         _losTiles.Clear();
     }

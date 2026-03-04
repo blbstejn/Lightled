@@ -5,14 +5,12 @@ using TMPro;
 
 /// <summary>
 /// Manages the main menu UI navigation and level loading.
-/// Handles transitions between menu panels (Main, Level Select, Options, Info).
 /// </summary>
 public class MainMenuManager : MonoBehaviour
 {
     [Header("Menu Panels")]
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject levelSelectPanel;
-    [SerializeField] private GameObject optionsPanel;
     [SerializeField] private GameObject infoPanel;
     [SerializeField] private GameObject lorePanel;
     [SerializeField] private GameObject howToPlayPanel;
@@ -37,10 +35,8 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private LoreData loreData;
     [Tooltip("Text component in the lore panel that displays the overall story.")]
     [SerializeField] private TMPro.TextMeshProUGUI loreStoryText;
-    [Tooltip("Parent transform for the generated hero list buttons.")]
-    [SerializeField] private Transform heroButtonContainer;
-    [Tooltip("Parent transform for the generated enemy list buttons.")]
-    [SerializeField] private Transform enemyButtonContainer;
+    [Tooltip("Parent transform for the generated unit list buttons (heroes and enemies combined).")]
+    [SerializeField] private Transform unitButtonContainer;
     [Tooltip("Panel to show/hide when a unit is selected. Hide it by default in the canvas.")]
     [SerializeField] private GameObject unitDetailPanel;
     [Tooltip("Image component to display the selected unit's sprite.")]
@@ -97,7 +93,6 @@ public class MainMenuManager : MonoBehaviour
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (levelSelectPanel != null) levelSelectPanel.SetActive(false);
-        if (optionsPanel != null) optionsPanel.SetActive(false);
         if (infoPanel != null) infoPanel.SetActive(false);
         if (lorePanel != null) lorePanel.SetActive(false);
         if (howToPlayPanel != null) howToPlayPanel.SetActive(false);
@@ -120,14 +115,6 @@ public class MainMenuManager : MonoBehaviour
     public void ShowLevelSelect()
     {
         SetActivePanel(levelSelectPanel);
-    }
-
-    /// <summary>
-    /// Shows the options panel.
-    /// </summary>
-    public void ShowOptions()
-    {
-        SetActivePanel(optionsPanel);
     }
 
     /// <summary>
@@ -166,7 +153,6 @@ public class MainMenuManager : MonoBehaviour
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(panelToShow == mainMenuPanel);
         if (levelSelectPanel != null) levelSelectPanel.SetActive(panelToShow == levelSelectPanel);
-        if (optionsPanel != null) optionsPanel.SetActive(panelToShow == optionsPanel);
         if (infoPanel != null) infoPanel.SetActive(panelToShow == infoPanel);
         if (lorePanel != null) lorePanel.SetActive(panelToShow == lorePanel);
         if (howToPlayPanel != null) howToPlayPanel.SetActive(panelToShow == howToPlayPanel);
@@ -205,63 +191,45 @@ public class MainMenuManager : MonoBehaviour
             }
         }
 
-        // Button layout settings
         float buttonWidth = 200f;
-        float buttonHeight = 40f;
-        float buttonSpacing = 5f;
+        float buttonHeight = 45f;
+        float buttonSpacing = 4f;
 
-        // Create a button for each level
         for (int i = 0; i < availableLevels.Length; i++)
         {
             LevelData level = availableLevels[i];
             if (level == null) continue;
 
-            // Create button GameObject
             GameObject buttonObj = new GameObject($"LevelButton_{i}_{level.levelName}", typeof(RectTransform));
             buttonObj.transform.SetParent(levelButtonContainer, false);
 
-            // Configure RectTransform - anchor to top-left
             RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
             rectTransform.sizeDelta = new Vector2(buttonWidth, buttonHeight);
-            rectTransform.anchorMin = new Vector2(0f, 1f); // Anchor to top-left
+            rectTransform.anchorMin = new Vector2(0f, 1f);
             rectTransform.anchorMax = new Vector2(0f, 1f);
-            rectTransform.pivot = new Vector2(0f, 1f); // Pivot at top-left
-            rectTransform.anchoredPosition = new Vector2(10, -i * (buttonHeight + buttonSpacing)); // Stack vertically with left padding
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.anchoredPosition = new Vector2(10, -i * (buttonHeight + buttonSpacing));
 
-            // Add Button component
             Button button = buttonObj.AddComponent<Button>();
-
-            // Add Image component for button visual (Unity default button style)
             Image buttonImage = buttonObj.AddComponent<Image>();
-            buttonImage.color = Color.white; // Standard Unity button base color
+            StyleButton(button, buttonImage);
 
-            // Create TextMeshPro text child
             GameObject textObj = new GameObject("Text", typeof(RectTransform));
             textObj.transform.SetParent(buttonObj.transform, false);
 
             RectTransform textRect = textObj.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.sizeDelta = Vector2.zero; // Fill parent
-            textRect.offsetMin = new Vector2(10, 5); // Padding
+            textRect.sizeDelta = Vector2.zero;
+            textRect.offsetMin = new Vector2(10, 5);
             textRect.offsetMax = new Vector2(-10, -5);
 
-            // Add TextMeshProUGUI component
             TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
             tmpText.text = level.levelName;
             tmpText.fontSize = 20;
-            tmpText.color = new Color(0.2f, 0.2f, 0.2f, 1f); // Dark text on light button
+            tmpText.color = new Color(0.2f, 0.2f, 0.2f, 1f);
             tmpText.alignment = TextAlignmentOptions.Left;
 
-            // Setup button colors (Unity default style)
-            ColorBlock colors = button.colors;
-            colors.normalColor = new Color(1f, 1f, 1f, 1f);        // White
-            colors.highlightedColor = new Color(0.96f, 0.96f, 0.96f, 1f); // Slightly darker on hover
-            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);     // Darker when pressed
-            colors.selectedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
-            button.colors = colors;
-
-            // Assign click listener
             LevelData capturedLevel = level;
             Button capturedButton = button;
             button.onClick.AddListener(() => OnLevelSelected(capturedLevel, capturedButton));
@@ -383,80 +351,99 @@ public class MainMenuManager : MonoBehaviour
 
     #endregion
 
-    #region Unit Roster
-
     /// <summary>
-    /// Generates hero buttons and enemy buttons into their respective containers.
-    /// Data (name, title, portrait, description) is read directly from each unit prefab.
+    /// Applies the standard grey button appearance (Unity UISprite + colour block).
     /// </summary>
-    private void GenerateUnitButtons()
+    private void StyleButton(Button button, Image buttonImage)
     {
-        if (loreData == null) return;
+        Sprite uiSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+        buttonImage.sprite = uiSprite;
+        buttonImage.type = Image.Type.Sliced;
+        buttonImage.color = new Color(0.784f, 0.784f, 0.784f, 1f); // Standard Unity grey
 
-        if (loreData.heroes != null)
-            PopulateUnitButtonContainer(heroButtonContainer, loreData.heroes);
-
-        if (loreData.enemies != null)
-            PopulateUnitButtonContainer(enemyButtonContainer, loreData.enemies);
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
+        colors.pressedColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+        colors.selectedColor = new Color(0.88f, 0.92f, 1f, 1f);
+        button.colors = colors;
     }
 
-    private void PopulateUnitButtonContainer(Transform container, BaseUnit[] units)
-    {
-        if (container == null) return;
+    #region Unit Roster
 
-        // Clear previously generated buttons
-        for (int i = container.childCount - 1; i >= 0; i--)
+    private void GenerateUnitButtons()
+    {
+        if (unitButtonContainer == null)
         {
-            Transform child = container.GetChild(i);
+            Debug.LogWarning("MainMenuManager: unitButtonContainer not assigned!");
+            return;
+        }
+
+        if (loreData == null)
+        {
+            Debug.LogWarning("MainMenuManager: LoreData not assigned!");
+            return;
+        }
+
+        for (int i = unitButtonContainer.childCount - 1; i >= 0; i--)
+        {
+            Transform child = unitButtonContainer.GetChild(i);
             if (child.name.StartsWith("UnitButton_"))
                 Destroy(child.gameObject);
         }
 
-        for (int i = 0; i < units.Length; i++)
+        float buttonWidth = 200f;
+        float buttonHeight = 45f;
+        float buttonSpacing = 4f;
+
+        if (loreData.units == null || loreData.units.Length == 0)
         {
-            BaseUnit unit = units[i];
-            if (unit == null) continue;
-
-            // Button root — Vertical Layout Group handles all positioning
-            GameObject buttonObj = new GameObject($"UnitButton_{i}_{unit.UnitName}", typeof(RectTransform));
-            buttonObj.transform.SetParent(container, false);
-
-            // Fixed height; width is controlled by the VLG's child width setting
-            RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(0f, 40f);
-
-            Button button = buttonObj.AddComponent<Button>();
-            Image buttonImage = buttonObj.AddComponent<Image>();
-            buttonImage.color = Color.white;
-
-            // Label
-            GameObject textObj = new GameObject("Text", typeof(RectTransform));
-            textObj.transform.SetParent(buttonObj.transform, false);
-
-            RectTransform textRect = textObj.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.sizeDelta = Vector2.zero;
-            textRect.offsetMin = new Vector2(10, 4);
-            textRect.offsetMax = new Vector2(-10, -4);
-
-            TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
-            tmpText.text = unit.UnitName;
-            tmpText.fontSize = 18;
-            tmpText.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-            tmpText.alignment = TextAlignmentOptions.Left;
-
-            ColorBlock colors = button.colors;
-            colors.normalColor = new Color(1f, 1f, 1f, 1f);
-            colors.highlightedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
-            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
-            colors.selectedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
-            button.colors = colors;
-
-            BaseUnit capturedUnit = unit;
-            Button capturedButton = button;
-            button.onClick.AddListener(() => OnUnitSelected(capturedUnit, capturedButton));
+            Debug.LogWarning("MainMenuManager: No units assigned in LoreData!");
+            return;
         }
+
+        for (int i = 0; i < loreData.units.Length; i++)
+        {
+            if (loreData.units[i] == null) continue;
+            CreateUnitButton(loreData.units[i], i, buttonWidth, buttonHeight, buttonSpacing);
+        }
+    }
+
+    private void CreateUnitButton(BaseUnit unit, int index, float buttonWidth, float buttonHeight, float buttonSpacing)
+    {
+        GameObject buttonObj = new GameObject($"UnitButton_{index}_{unit.UnitName}", typeof(RectTransform));
+        buttonObj.transform.SetParent(unitButtonContainer, false);
+
+        RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
+        rectTransform.sizeDelta = new Vector2(buttonWidth, buttonHeight);
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.anchoredPosition = new Vector2(10, -index * (buttonHeight + buttonSpacing));
+
+        Button button = buttonObj.AddComponent<Button>();
+        Image buttonImage = buttonObj.AddComponent<Image>();
+        StyleButton(button, buttonImage);
+
+        GameObject textObj = new GameObject("Text", typeof(RectTransform));
+        textObj.transform.SetParent(buttonObj.transform, false);
+
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
+        textRect.offsetMin = new Vector2(10, 5);
+        textRect.offsetMax = new Vector2(-10, -5);
+
+        TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
+        tmpText.text = unit.UnitName;
+        tmpText.fontSize = 20;
+        tmpText.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+        tmpText.alignment = TextAlignmentOptions.Left;
+
+        BaseUnit capturedUnit = unit;
+        Button capturedButton = button;
+        button.onClick.AddListener(() => OnUnitSelected(capturedUnit, capturedButton));
     }
 
     /// <summary>
@@ -507,14 +494,6 @@ public class MainMenuManager : MonoBehaviour
     public void OnPlayButtonClicked()
     {
         ShowLevelSelect();
-    }
-
-    /// <summary>
-    /// Called by the Options button.
-    /// </summary>
-    public void OnOptionsButtonClicked()
-    {
-        ShowOptions();
     }
 
     /// <summary>

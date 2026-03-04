@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Holds all lore content for the info screen.
-/// Heroes and enemies are referenced as prefabs — name, title, portrait, and description
-/// are read directly from the unit's own fields (set in the prefab Inspector).
+/// Units are referenced as prefabs — name, title, portrait, and description
+/// are read directly from each unit's own fields (set in the prefab Inspector).
 /// Create via: Right-click in Project > Create > Game > Lore Data
 /// </summary>
 [CreateAssetMenu(fileName = "LoreData", menuName = "Game/Lore Data")]
@@ -13,13 +13,9 @@ public class LoreData : ScriptableObject
     [TextArea(6, 16)]
     public string overallStory;
 
-    [Header("Fireteam")]
-    [Tooltip("Drag hero prefabs here. UnitName, title, portrait and description are read from each prefab.")]
-    public BaseHero[] heroes;
-
-    [Header("Enemies")]
-    [Tooltip("Drag enemy prefabs here. UnitName, title, portrait and description are read from each prefab.")]
-    public BaseEnemy[] enemies;
+    [Header("Units")]
+    [Tooltip("Drag unit prefabs here in the order you want them listed. UnitName, title, portrait and description are read from each prefab.")]
+    public BaseUnit[] units;
 
     /// <summary>
     /// Called by Unity when the asset is first created or Reset is clicked.
