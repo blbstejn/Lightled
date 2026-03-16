@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[CreateAssetMenu(menuName = "Abilities/Flamethrower")]
 public class FlamethrowerAbility : TargetedAbility
 {
     public override string abilityName => "Flamethrower";
@@ -11,7 +12,7 @@ public class FlamethrowerAbility : TargetedAbility
 
     public int RemainingCharges => remainingCharges;
 
-    public void Initialize()
+    private void OnEnable()
     {
         remainingCharges = maxCharges;
     }
@@ -110,11 +111,11 @@ public class FlamethrowerAbility : TargetedAbility
         }
 
         // Create permanent fire on center tile only (blocks LOS and movement)
+        // Units entering the 8 neighbor tiles will trigger CheckAdjacentFireDamage via the center fire
         if (FireEffectManager.Instance != null)
         {
             FireEffectManager.Instance.CreateFireEffect(target, rollDamageImmediately: false);
 
-            // Create brief fire flash on all neighbor tiles to show damage area
             var neighbors = GridManager.Instance.GetNeighbours(target);
             foreach (Tile neighbor in neighbors)
             {

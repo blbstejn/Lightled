@@ -30,10 +30,48 @@ public class BaseHero : BaseUnit
 
     protected virtual void Start()
     {
-        // Runs in Start so subclass Awake/SetupAbilities finishes first.
-        // Previously ran in Awake, but subclasses replace unitAbilities after
-        // base.Awake(), which wiped out the Overwatch ability.
-        EnsureTurnAbilities();
+        // Runs in Start so any Inspector-assigned unitAbilities are already loaded.
+        // Only adds an ability if one of that type is not already in the list,
+        // so Inspector assignments always take precedence.
+        EnsureBaseAbilities();
+    }
+
+    /// <summary>
+    /// Adds core abilities as fallbacks if they are not already assigned via Inspector.
+    /// Contextual abilities (Move) and non-contextual abilities (Turn, Overwatch) are covered.
+    /// </summary>
+    private void EnsureBaseAbilities()
+    {
+        bool hasMove = false;
+        bool hasTurnLeft = false;
+        bool hasTurnRight = false;
+        bool hasOverwatch = false;
+
+        foreach (var ability in unitAbilities)
+        {
+            if (ability is MoveAbility) hasMove = true;
+            if (ability is TurnLeftAbility) hasTurnLeft = true;
+            if (ability is TurnRightAbility) hasTurnRight = true;
+            if (ability is OverwatchAbility) hasOverwatch = true;
+        }
+
+        if (!hasMove)
+            unitAbilities.Add(ScriptableObject.CreateInstance<MoveAbility>());
+        if (!hasTurnLeft)
+            unitAbilities.Add(ScriptableObject.CreateInstance<TurnLeftAbility>());
+        if (!hasTurnRight)
+            unitAbilities.Add(ScriptableObject.CreateInstance<TurnRightAbility>());
+        if (!hasOverwatch && CanUseOverwatch)
+            unitAbilities.Add(ScriptableObject.CreateInstance<OverwatchAbility>());
+    }
+
+    protected override void OnMoveEnded()
+    {
+        base.OnMoveEnded();
+
+        // Refresh move highlights and LOS from the new tile position.
+        if (UnitManager.Instance != null && UnitManager.Instance.SelectedHero == this)
+            UnitManager.Instance.SetSelectedHero(this);
     }
 
     public override void StartNewTurn()
@@ -48,45 +86,6 @@ public class BaseHero : BaseUnit
     /// Whether this hero can use Overwatch ability. Override to disable for specific heroes.
     /// </summary>
     protected virtual bool CanUseOverwatch => true;
-
-    /// <summary>
-    /// Ensures the hero has Turn Left, Turn Right, and Overwatch abilities.
-    /// Creates them at runtime if not assigned in Inspector.
-    /// </summary>
-    private void EnsureTurnAbilities()
-    {
-        bool hasTurnLeft = false;
-        bool hasTurnRight = false;
-        bool hasOverwatch = false;
-
-        foreach (var ability in unitAbilities)
-        {
-            if (ability is TurnLeftAbility) hasTurnLeft = true;
-            if (ability is TurnRightAbility) hasTurnRight = true;
-            if (ability is OverwatchAbility) hasOverwatch = true;
-        }
-
-        // Create and add Turn Left ability if missing
-        if (!hasTurnLeft)
-        {
-            var turnLeft = ScriptableObject.CreateInstance<TurnLeftAbility>();
-            unitAbilities.Add(turnLeft);
-        }
-
-        // Create and add Turn Right ability if missing
-        if (!hasTurnRight)
-        {
-            var turnRight = ScriptableObject.CreateInstance<TurnRightAbility>();
-            unitAbilities.Add(turnRight);
-        }
-
-        // Create and add Overwatch ability if missing and hero can use it
-        if (!hasOverwatch && CanUseOverwatch)
-        {
-            var overwatch = ScriptableObject.CreateInstance<OverwatchAbility>();
-            unitAbilities.Add(overwatch);
-        }
-    }
 
     protected override void OnDeath(BaseUnit killer)
     {

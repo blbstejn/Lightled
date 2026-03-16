@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[CreateAssetMenu(menuName = "Abilities/Melee Attack")]
 public class MeleeAttackAbility : TargetedAbility
 {
     public override string abilityName => "Melee Attack";

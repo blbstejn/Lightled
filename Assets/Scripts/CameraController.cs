@@ -152,10 +152,14 @@ public class CameraController : MonoBehaviour
         if (mouse == null)
             return;
 
-        float scroll = mouse.scroll.ReadValue().y / 120f; // Normalize scroll value
+        float scrollRaw = mouse.scroll.ReadValue().y;
 
-        if (Mathf.Abs(scroll) > 0.01f && _camera != null && _camera.orthographic)
+        if (Mathf.Abs(scrollRaw) > 0.01f && _camera != null && _camera.orthographic)
         {
+            // Unity Input System scroll values differ by version/platform:
+            // ~120/notch (Windows raw) or ~1/notch (normalized). Detect and handle both.
+            float scroll = Mathf.Abs(scrollRaw) > 2f ? scrollRaw / 120f : scrollRaw;
+
             Vector2 mousePos = mouse.position.ReadValue();
 
             // Zoom towards mouse position

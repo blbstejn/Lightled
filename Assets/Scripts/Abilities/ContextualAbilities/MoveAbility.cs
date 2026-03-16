@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[CreateAssetMenu(menuName = "Abilities/Move")]
 public class MoveAbility : TargetedAbility
 {
     public override string abilityName => "Move";

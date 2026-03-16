@@ -111,7 +111,13 @@ MonoBehaviour:
     knows these catacombs better than anyone. That will have to be enough."
   OccupiedTile: {fileID: 0}
   Faction: 0
-  unitAbilities: []
+  unitAbilities:
+  - {fileID: 11400000, guid: 829d5098a18f71d47b45206df28eebaf, type: 2}
+  - {fileID: 11400000, guid: 0bfd8aeef4c469a47964c20f085baae9, type: 2}
+  - {fileID: 11400000, guid: 1e42524a671dcc243b167e6dfc0f4ed7, type: 2}
+  - {fileID: 11400000, guid: cb70a45c7ecc506419bbe30f20d3655f, type: 2}
+  - {fileID: 11400000, guid: bf11abb6f752bc448bdaa9495cdd9b52, type: 2}
+  - {fileID: 11400000, guid: 3374463ae1343184d9cdc109bf952469, type: 2}
   movementProfile:
     allowSideways: 1
     forwardCost: 1

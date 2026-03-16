@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.9791925, y: 0.4314869, z: 0}
-  m_LocalScale: {x: 1.7307693, y: 1.7307693, z: 1}
+  m_LocalScale: {x: 1.1076924, y: 1.1076924, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -105,12 +105,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy1
   UnitName: Ghoul
-  title: The Undead Horde
-  description: 'Devilishly fast undead with razor sharp claws that punch even through
-    the hardest of armors.
-
-    Keep them away from the knights, for meeting them
-    face to face is death assured.'
+  title: The Hungry Dead
+  description: "They were people once. Now they are speed and claws and nothing else.
+    No hesitation, no formation, no mercy. A knight in full armor is not a challenge
+    to them \u2014 it is a puzzle they have already solved. Do not let them get close."
   OccupiedTile: {fileID: 0}
   Faction: 1
   unitAbilities: []

@@ -124,7 +124,10 @@ public class PauseMenuManager : MonoBehaviour
         Time.timeScale = 1f; // Ensure time is unpaused
         _isPaused = false;
 
-        // Reload current scene
+        // Re-set the level so GameManager can load it again after scene reload
+        if (GameManager.Instance != null && GameManager.Instance.CurrentLevel != null)
+            LevelLoader.SelectedLevel = GameManager.Instance.CurrentLevel;
+
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 

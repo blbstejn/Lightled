@@ -210,7 +210,9 @@ public class EnemyAIManager : MonoBehaviour
                     if (action.TargetTile != null)
                     {
                         enemy.ExecuteMove(action.TargetTile);
-                        yield return new WaitUntil(() => !enemy.IsMoving);
+                        yield return new WaitUntil(() => enemy == null || !enemy.IsAlive || !enemy.IsMoving);
+                        if (enemy == null || !enemy.IsAlive)
+                            yield break;
                         yield return new WaitForSeconds(delayBetweenActions);
                     }
                     break;

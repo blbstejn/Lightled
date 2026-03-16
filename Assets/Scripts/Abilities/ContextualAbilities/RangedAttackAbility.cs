@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[CreateAssetMenu(menuName = "Abilities/Ranged Attack")]
 public class RangedAttackAbility : TargetedAbility
 {
     public override string abilityName => "Ranged Attack";

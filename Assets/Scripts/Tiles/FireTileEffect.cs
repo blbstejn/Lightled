@@ -21,6 +21,12 @@ public class FireTileEffect : MonoBehaviour
         _fireRenderer.sortingOrder = 2; // Above tiles but below units
     }
 
+    private void OnDestroy()
+    {
+        if (_fireRenderer != null)
+            Destroy(_fireRenderer.gameObject);
+    }
+
     public void KillAliensOnTile()
     {
         if (AffectedTile.OccupiedUnit != null && AffectedTile.OccupiedUnit.IsAlive)

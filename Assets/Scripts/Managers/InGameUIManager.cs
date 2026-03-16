@@ -45,6 +45,8 @@ public class InGameUIManager : MonoBehaviour
     [SerializeField] private float turnDuration = 180f; // 3 minutes
 
     private BaseHero _currentHero;
+    private GameObject _abilityTooltipPanel;
+    private TextMeshProUGUI _abilityTooltipText;
     private GameObject _tooltipPanel;
     private TextMeshProUGUI _tooltipNameText;
     private TextMeshProUGUI _tooltipAPText;
@@ -92,6 +94,9 @@ public class InGameUIManager : MonoBehaviour
         // Setup tooltip
         SetupTooltip();
 
+        // Setup ability tooltip
+        SetupAbilityTooltip();
+
         // Setup escape progress UI (for Escape mode levels)
         SetupEscapeProgressUI();
     }
@@ -115,6 +120,12 @@ public class InGameUIManager : MonoBehaviour
 
         // Update turn timer
         UpdateTurnTimer();
+
+        // Track mouse for ability tooltip
+        if (_abilityTooltipPanel != null && _abilityTooltipPanel.activeSelf)
+        {
+            _abilityTooltipPanel.transform.position = Input.mousePosition + new Vector3(12, 12, 0);
+        }
     }
 
     /// <summary>
@@ -245,7 +256,7 @@ public class InGameUIManager : MonoBehaviour
         }
         else
         {
-            buttonObj = CreateAbilityButtonProgrammatically(ability.abilityName);
+            buttonObj = CreateAbilityButtonProgrammatically(ability);
         }
 
         Button button = buttonObj.GetComponent<Button>();
@@ -254,13 +265,6 @@ public class InGameUIManager : MonoBehaviour
             Debug.LogError($"InGameUIManager: Button component missing on ability button for {ability.abilityName}");
             Destroy(buttonObj);
             return null;
-        }
-
-        // Set button text
-        TextMeshProUGUI buttonText = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-        if (buttonText != null)
-        {
-            buttonText.text = $"{ability.abilityName}\n({ability.actionPointCost} AP)";
         }
 
         // Add click listener
@@ -274,49 +278,93 @@ public class InGameUIManager : MonoBehaviour
 
     /// <summary>
     /// Creates an ability button programmatically (no prefab needed).
+    /// Shows icon + AP cost if an icon is assigned; falls back to name text.
     /// </summary>
-    private GameObject CreateAbilityButtonProgrammatically(string abilityName)
+    private GameObject CreateAbilityButtonProgrammatically(UnitAbility ability)
     {
-        // Create button GameObject
-        GameObject buttonObj = new GameObject($"AbilityButton_{abilityName}", typeof(RectTransform));
+        bool hasIcon = ability.icon != null;
+
+        GameObject buttonObj = new GameObject($"AbilityButton_{ability.abilityName}", typeof(RectTransform));
         buttonObj.transform.SetParent(abilityButtonContainer, false);
 
-        // Configure RectTransform
         RectTransform rectTransform = buttonObj.GetComponent<RectTransform>();
-        rectTransform.sizeDelta = new Vector2(120, 60);
+        rectTransform.sizeDelta = new Vector2(70, 70); // Square icon button
 
-        // Add Button component
-        Button button = buttonObj.AddComponent<Button>();
-
-        // Add Image component for visual
+        // Image must be added before Button so targetGraphic is auto-assigned,
+        // otherwise the disabled tint bleeds onto all child graphics (icon, text).
         Image buttonImage = buttonObj.AddComponent<Image>();
-        buttonImage.color = new Color(0.15f, 0.35f, 0.55f, 1f); // Blue-ish
+        buttonImage.color = Color.white; // ColorBlock normalColor handles the tint
 
-        // Create text child
-        GameObject textObj = new GameObject("Text", typeof(RectTransform));
-        textObj.transform.SetParent(buttonObj.transform, false);
+        Button button = buttonObj.AddComponent<Button>();
+        button.targetGraphic = buttonImage; // explicit — never null
 
-        RectTransform textRect = textObj.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.sizeDelta = Vector2.zero;
-        textRect.offsetMin = new Vector2(5, 5);
-        textRect.offsetMax = new Vector2(-5, -5);
-
-        // Add TextMeshProUGUI
-        TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
-        tmpText.fontSize = 14;
-        tmpText.color = Color.white;
-        tmpText.alignment = TextAlignmentOptions.Center;
-        tmpText.enableWordWrapping = true;
-
-        // Setup button colors
         ColorBlock colors = button.colors;
         colors.normalColor = new Color(0.15f, 0.35f, 0.55f, 1f);
         colors.highlightedColor = new Color(0.2f, 0.45f, 0.65f, 1f);
         colors.pressedColor = new Color(0.1f, 0.3f, 0.5f, 1f);
-        colors.disabledColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
+        colors.disabledColor = new Color(0.35f, 0.35f, 0.35f, 1f);
         button.colors = colors;
+
+        // Tooltip on hover — uses custom trigger instead of EventTrigger to avoid consuming scroll events
+        var tooltipTrigger = buttonObj.AddComponent<AbilityTooltipTrigger>();
+        tooltipTrigger.TooltipText = ability.abilityName;
+        tooltipTrigger.OnEnter = ShowAbilityTooltip;
+        tooltipTrigger.OnExit = HideAbilityTooltip;
+
+        if (hasIcon)
+        {
+            // Icon fills the top portion of the button
+            GameObject iconObj = new GameObject("Icon", typeof(RectTransform));
+            iconObj.transform.SetParent(buttonObj.transform, false);
+
+            RectTransform iconRect = iconObj.GetComponent<RectTransform>();
+            iconRect.anchorMin = new Vector2(0f, 0.25f);
+            iconRect.anchorMax = Vector2.one;
+            iconRect.sizeDelta = Vector2.zero;
+            iconRect.offsetMin = new Vector2(6, 0);
+            iconRect.offsetMax = new Vector2(-6, -6);
+
+            Image iconImage = iconObj.AddComponent<Image>();
+            iconImage.sprite = ability.icon;
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false; // don't block button clicks
+
+            // AP cost text at the bottom
+            GameObject apObj = new GameObject("APText", typeof(RectTransform));
+            apObj.transform.SetParent(buttonObj.transform, false);
+
+            RectTransform apRect = apObj.GetComponent<RectTransform>();
+            apRect.anchorMin = Vector2.zero;
+            apRect.anchorMax = new Vector2(1f, 0.28f);
+            apRect.sizeDelta = Vector2.zero;
+
+            TextMeshProUGUI apText = apObj.AddComponent<TextMeshProUGUI>();
+            apText.text = $"{ability.actionPointCost} AP";
+            apText.fontSize = 11;
+            apText.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+            apText.alignment = TextAlignmentOptions.Center;
+            apText.raycastTarget = false;
+        }
+        else
+        {
+            // No icon — show name + AP cost as text
+            GameObject textObj = new GameObject("Text", typeof(RectTransform));
+            textObj.transform.SetParent(buttonObj.transform, false);
+
+            RectTransform textRect = textObj.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.offsetMin = new Vector2(4, 4);
+            textRect.offsetMax = new Vector2(-4, -4);
+
+            TextMeshProUGUI tmpText = textObj.AddComponent<TextMeshProUGUI>();
+            tmpText.text = $"{ability.abilityName}\n({ability.actionPointCost} AP)";
+            tmpText.fontSize = 12;
+            tmpText.color = Color.white;
+            tmpText.alignment = TextAlignmentOptions.Center;
+            tmpText.enableWordWrapping = true;
+        }
 
         return buttonObj;
     }
@@ -885,6 +933,51 @@ public class InGameUIManager : MonoBehaviour
         _tooltipAPText.color = new Color(0.3f, 0.7f, 0.9f, 1f); // Blue-ish for AP
 
         _tooltipPanel.SetActive(false);
+    }
+
+    private void SetupAbilityTooltip()
+    {
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        GameObject panelObj = new GameObject("AbilityTooltip", typeof(RectTransform));
+        panelObj.transform.SetParent(canvas.transform, false);
+        _abilityTooltipPanel = panelObj;
+
+        RectTransform rect = panelObj.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(130, 28);
+        rect.pivot = new Vector2(0f, 1f); // top-left pivot
+
+        Image bg = panelObj.AddComponent<Image>();
+        bg.color = new Color(0.08f, 0.08f, 0.08f, 0.88f);
+
+        GameObject textObj = new GameObject("Text", typeof(RectTransform));
+        textObj.transform.SetParent(panelObj.transform, false);
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(6, 3);
+        textRect.offsetMax = new Vector2(-6, -3);
+
+        _abilityTooltipText = textObj.AddComponent<TextMeshProUGUI>();
+        _abilityTooltipText.fontSize = 13;
+        _abilityTooltipText.color = Color.white;
+        _abilityTooltipText.alignment = TextAlignmentOptions.MidlineLeft;
+
+        _abilityTooltipPanel.SetActive(false);
+    }
+
+    private void ShowAbilityTooltip(string abilityName)
+    {
+        if (_abilityTooltipPanel == null) return;
+        _abilityTooltipText.text = abilityName;
+        _abilityTooltipPanel.SetActive(true);
+    }
+
+    private void HideAbilityTooltip()
+    {
+        if (_abilityTooltipPanel != null)
+            _abilityTooltipPanel.SetActive(false);
     }
 
     /// <summary>

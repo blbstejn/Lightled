@@ -12,6 +12,10 @@ public abstract class UnitAbility : ScriptableObject
     public abstract int actionPointCost { get; } // Hardcoded in each ability class
     public abstract bool isContextual { get; } // Contextual = tile clicks, UI = button clicks
 
+    [Header("UI")]
+    [Tooltip("Icon displayed on the ability button. If left empty, the ability name is shown as text instead.")]
+    public Sprite icon;
+
     // For backwards compatibility and targeted abilities
     public abstract bool CanExecute(BaseUnit unit, Tile target);
     public abstract void Execute(BaseUnit unit, Tile target);

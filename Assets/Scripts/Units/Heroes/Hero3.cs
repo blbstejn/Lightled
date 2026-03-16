@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 
 public class Hero3 : BaseHero
@@ -9,28 +7,16 @@ public class Hero3 : BaseHero
     /// </summary>
     protected override bool CanUseOverwatch => false;
 
-    public override void Awake()
+    protected override void Start()
     {
-        base.Awake();
-        SetupAbilities();
-    }
+        base.Start(); // runs EnsureBaseAbilities (Move, TurnLeft, TurnRight)
 
-    private void SetupAbilities()
-    {
-        var abilities = new List<UnitAbility>();
+        // Ensure FlamethrowerAbility is present; Inspector assignment takes precedence.
+        bool hasFlamethrower = false;
+        foreach (var a in unitAbilities)
+            if (a is FlamethrowerAbility) { hasFlamethrower = true; break; }
 
-        // Flamethrower loadout: Melee, Move, FLAMETHROWER (12 charges), Turn Left, Turn Right
-        abilities.Add(ScriptableObject.CreateInstance<MeleeAttackAbility>());
-        abilities.Add(ScriptableObject.CreateInstance<MoveAbility>());
-
-        // Create and initialize flamethrower with 12 charges
-        var flamethrower = ScriptableObject.CreateInstance<FlamethrowerAbility>();
-        flamethrower.Initialize();
-        abilities.Add(flamethrower);
-
-        abilities.Add(ScriptableObject.CreateInstance<TurnLeftAbility>());
-        abilities.Add(ScriptableObject.CreateInstance<TurnRightAbility>());
-
-        unitAbilities = abilities;
+        if (!hasFlamethrower)
+            unitAbilities.Add(ScriptableObject.CreateInstance<FlamethrowerAbility>());
     }
 }

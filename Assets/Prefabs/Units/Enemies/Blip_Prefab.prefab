@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.9148936, y: 1.9148936, z: 1}
+  m_LocalScale: {x: 1.2255319, y: 1.2255319, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -105,12 +105,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy2
   UnitName: Blip
-  title: The Desperate Message
-  description: 'Our goddess constantly fights the necromancer''s powers.
-
-    Despite
-    her valiant effort, she can still show you where his evil forces approach. If
-    not how many - at least where.'
+  title: The Goddess's Warning
+  description: "The necromancer's power runs deep in these walls \u2014 deep enough
+    to blind even her. But not completely. She fights for every sliver of sight she
+    can give you, and what she cannot see clearly, she still feels. Trust the warnings.
+    They cost her."
   OccupiedTile: {fileID: 0}
   Faction: 1
   unitAbilities: []
